@@ -17,7 +17,7 @@ metadata:
 spec:
   description: "Infrastructure components like controllers, networking, and storage."
   sourceRepos:
-  - https://github.com/mitchross/talos-argocd-proxmox.git
+  - https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
   destinations:
   - namespace: '*'
     server: https://kubernetes.default.svc
@@ -37,7 +37,7 @@ metadata:
 spec:
   description: "User-facing applications."
   sourceRepos:
-  - https://github.com/mitchross/talos-argocd-proxmox.git
+  - https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
   destinations:
   - namespace: '*'
     server: https://kubernetes.default.svc
@@ -57,7 +57,7 @@ metadata:
 spec:
   description: "Monitoring and observability stack (Prometheus, Grafana, Loki)."
   sourceRepos:
-  - https://github.com/mitchross/talos-argocd-proxmox.git
+  - https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
   destinations:
   - namespace: '*'
     server: https://kubernetes.default.svc

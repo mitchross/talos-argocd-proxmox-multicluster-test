@@ -10,7 +10,7 @@ spec:
   goTemplateOptions: ["missingkey=error"]
   generators:
     - git:
-        repoURL: https://github.com/mitchross/talos-argocd-proxmox.git
+        repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
         revision: main
         directories:
           - path: clusters/openshift/apps/*/*
@@ -24,7 +24,7 @@ spec:
       project: openshift-apps
       revisionHistoryLimit: 3
       source:
-        repoURL: https://github.com/mitchross/talos-argocd-proxmox.git
+        repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
         targetRevision: main
         path: "{{.path.path}}"
       destination:

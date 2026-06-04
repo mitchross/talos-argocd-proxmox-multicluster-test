@@ -12,7 +12,7 @@ metadata:
 spec:
   description: "OpenShift platform services and controllers."
   sourceRepos:
-    - https://github.com/mitchross/talos-argocd-proxmox.git
+    - https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
   destinations:
     - namespace: "*"
       server: https://kubernetes.default.svc
@@ -32,7 +32,7 @@ metadata:
 spec:
   description: "OpenShift user-facing applications."
   sourceRepos:
-    - https://github.com/mitchross/talos-argocd-proxmox.git
+    - https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
   destinations:
     - namespace: "*"
       server: https://kubernetes.default.svc

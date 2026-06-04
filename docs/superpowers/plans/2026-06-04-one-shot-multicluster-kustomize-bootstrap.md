@@ -302,7 +302,7 @@ generator and metadata-derived fields with:
 ```yaml
   generators:
   - git:
-      repoURL: https://github.com/mitchross/talos-argocd-proxmox.git
+      repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
       revision: main
       directories:
       - path: clusters/talos/apps/*/*
@@ -316,7 +316,7 @@ generator and metadata-derived fields with:
       project: talos-apps
       revisionHistoryLimit: 3
       source:
-        repoURL: https://github.com/mitchross/talos-argocd-proxmox.git
+        repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
         targetRevision: main
         path: "{{.path.path}}"
       destination:
@@ -342,7 +342,7 @@ In `clusters/openshift/argocd/appsets/apps-appset.yaml`, use:
 ```yaml
   generators:
     - git:
-        repoURL: https://github.com/mitchross/talos-argocd-proxmox.git
+        repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
         revision: main
         directories:
           - path: clusters/openshift/apps/*/*
@@ -356,7 +356,7 @@ In `clusters/openshift/argocd/appsets/apps-appset.yaml`, use:
       project: openshift-apps
       revisionHistoryLimit: 3
       source:
-        repoURL: https://github.com/mitchross/talos-argocd-proxmox.git
+        repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
         targetRevision: main
         path: "{{.path.path}}"
       destination:

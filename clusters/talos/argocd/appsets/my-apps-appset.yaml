@@ -17,7 +17,7 @@ spec:
     - /metadata/annotations/argocd.argoproj.io~1compare-options
   generators:
   - git:
-      repoURL: https://github.com/mitchross/talos-argocd-proxmox.git
+      repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
       revision: main
       directories:
       # project-nomad is intentionally one bundled app at manifests/apps/home/project-nomad.
@@ -47,7 +47,7 @@ spec:
       project: talos-apps
       revisionHistoryLimit: 3
       source:
-        repoURL: https://github.com/mitchross/talos-argocd-proxmox.git
+        repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
         targetRevision: main
         path: "{{.path.path}}"
       destination:

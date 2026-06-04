@@ -20,7 +20,7 @@ spec:
     - /metadata/annotations/argocd.argoproj.io~1compare-options
   generators:
   - git:
-      repoURL: https://github.com/mitchross/talos-argocd-proxmox.git
+      repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
       revision: main
       files:
       - path: clusters/talos/database/*/*/.argocd/config.json
@@ -46,7 +46,7 @@ spec:
       project: "{{.project}}"
       revisionHistoryLimit: 3
       source:
-        repoURL: https://github.com/mitchross/talos-argocd-proxmox.git
+        repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
         targetRevision: main
         path: "{{.sourcePath}}"
       destination:

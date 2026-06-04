@@ -13,7 +13,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/mitchross/talos-argocd-proxmox.git
+    repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
     path: clusters/talos/argocd
     targetRevision: main
   destination:

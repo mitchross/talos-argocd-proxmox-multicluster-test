@@ -117,7 +117,7 @@ App ApplicationSets should use Git directory generators:
 ```yaml
 generators:
   - git:
-      repoURL: https://github.com/mitchross/talos-argocd-proxmox.git
+      repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
       revision: main
       directories:
         - path: clusters/talos/apps/*/*

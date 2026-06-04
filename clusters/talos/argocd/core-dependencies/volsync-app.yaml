@@ -13,7 +13,7 @@ metadata:
 spec:
   project: talos-infrastructure
   source:
-    repoURL: https://github.com/mitchross/talos-argocd-proxmox.git
+    repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
     targetRevision: main
     path: clusters/talos/infra/volsync
   destination:

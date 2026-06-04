@@ -1,0 +1,15 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: gateway-pool
+  namespace: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  # Reserved range for Gateway API LoadBalancer Services. The OpenShift
+  # Gateway provisions a type:LoadBalancer Service in openshift-ingress;
+  # MetalLB hands it 192.168.10.230 (matches the Cloudflare
+  # *.gateway.apps.sno-ai-lab.vanillax.xyz -> 192.168.10.230 record).
+  addresses:
+    - 192.168.10.230-192.168.10.240

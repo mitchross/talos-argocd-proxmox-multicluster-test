@@ -1,0 +1,13 @@
+apiVersion: metallb.io/v1beta1
+kind: MetalLB
+metadata:
+  name: metallb
+  namespace: metallb-system
+  annotations:
+    # The metallb.io CRDs do not exist until the operator CSV installs.
+    # Skip the server-side dry run on first sync; Argo retry reconciles
+    # once the operator is ready.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    # Apply after the operator Subscription/OperatorGroup in this app.
+    argocd.argoproj.io/sync-wave: "1"
+spec: {}

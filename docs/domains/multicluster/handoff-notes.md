@@ -148,12 +148,19 @@ Verified cluster facts:
 - No `argocd` namespace or Argo CD CRDs exist.
 - Required pre-seeded 1Password namespaces/secrets do not exist.
 
-The OpenShift GatewayClass contract remains plausible: official OKD 4.20 and
-OpenShift 4.21 documentation require
-`controllerName: openshift.io/gateway-controller/v1`. Creating that
-GatewayClass causes the Ingress Operator to install the Gateway API service
-mesh implementation. This behavior is still unverified on the live
-`4.22.0-rc.5` cluster.
+The OpenShift GatewayClass contract is confirmed by OKD/OpenShift 4.19+
+documentation: creating a GatewayClass with
+`controllerName: openshift.io/gateway-controller/v1` makes the Ingress
+Operator **auto-install a lightweight OpenShift Service Mesh** — it creates an
+Istio CR and an `istiod-openshift-gateway` Deployment in `openshift-ingress`.
+**Do NOT install `servicemeshoperator3` (or v2) manually**; the operator owns
+the mesh. The repo and the `bootstrap-cluster.sh` guard that blocks
+`servicemeshoperator` are therefore correct as-is. (The `openshift-sno-lab`
+reference repo's README claim that the Service Mesh operator must be installed
+first is a stale dev-preview instruction — ignore it.) This auto-install gives
+the **control plane only**; external reachability still requires a
+LoadBalancer provider — see blocker #2. The exact behavior remains unverified
+on the live `4.22.0-rc.5` build.
 
 Primary references:
 
@@ -166,34 +173,51 @@ Do **not** run `./scripts/bootstrap-cluster.sh openshift` yet. The script
 checks Gateway CRDs, OSSM v2, and secrets, but it does not currently catch all
 of these live blockers before installing Argo CD.
 
-### 1. LVM Storage Is Unavailable
+> **Repo status (working tree):** `subscription.yaml` channel bumped
+> `stable-4.20` -> `stable-4.22`. Namespace left as `openshift-storage` (still
+> valid for LVMS). Live catalog availability on the rc is still unverified —
+> see below.
 
-- Live `Subscription/openshift-storage/lvms-operator` is
+- Live `Subscription/openshift-storage/lvms-operator` was
   `ResolutionFailed`.
 - Failure message: no operators found in package `lvms-operator` in the
   referenced `redhat-operators` catalog.
 - There is no installed LVM CSV, no `LVMCluster` CRD, no TopoLVM API, no LVM
   pods, and no StorageClass.
-- Repo manifest pins channel `stable-4.20`; the live cluster is
-  `4.22.0-rc.5` on `stable-4.22`.
+- The channel mismatch (repo was `stable-4.20`, cluster is `4.22.0-rc.5`) is
+  now fixed in Git, **but** on a pre-GA `rc` build the `redhat-operators`
+  catalog may not yet publish LVMS at all — which would still produce
+  `ResolutionFailed`. Verify before bootstrap:
+  `oc get packagemanifest lvms-operator -n openshift-marketplace -o jsonpath='{.status.channels[*].name}'`.
+  If `stable-4.22` is absent, wait for 4.22 GA or point at a pre-GA catalog.
 - Repo uses namespace `openshift-storage`; current Red Hat 4.20 documentation
-  describes `openshift-lvm-storage` as the default namespace. Confirm the
-  supported 4.22 operator/package/channel/namespace before changing Git.
+  describes `openshift-lvm-storage` as the default namespace. Either works;
+  confirm the supported 4.22 namespace if you change it.
 
 Until this is resolved, every OpenShift app PVC using
 `vanillax-local-rwo` will remain Pending.
 
-### 2. Gateway LoadBalancer Publishing Is Unavailable
+> **Repo status (working tree):** addressed. Added
+> `clusters/openshift/infra/metallb/` (MetalLB operator Subscription +
+> OperatorGroup + namespace, `MetalLB` CR, `IPAddressPool gateway-pool`
+> `192.168.10.230-.240`, `L2Advertisement`) plus a wave-1 core-dependency
+> `core-dependencies/metallb-app.yaml`. MetalLB **is** OpenShift's supported
+> bare-metal LB (first-party Red Hat operator), so this is the intended fix,
+> not a third-party add-on. Live reachability still needs verification after
+> bootstrap.
 
 - The OpenShift Gateway implementation provisions a `LoadBalancer` Service for
-  each Gateway.
-- The live bare-metal/platform-None cluster has no LoadBalancer Services,
+  each Gateway. The GatewayClass auto-installs only the mesh control plane; the
+  data-plane Service stays `Pending` forever without an LB provider.
+- The live bare-metal/platform-None cluster had no LoadBalancer Services,
   MetalLB APIs, MetalLB subscription, or other observed load-balancer provider.
-- `192.168.10.230` is not currently reachable from the operator workstation;
-  ARP resolution reports `FAILED`.
+- `192.168.10.230` was not reachable from the operator workstation;
+  ARP resolution reported `FAILED` (expected until MetalLB is installed and the
+  Gateway Service claims the IP).
 
-Before Gateway sync, select and verify the bare-metal LoadBalancer/IP
-advertisement mechanism and reserve the intended Gateway address.
+After bootstrap, confirm the Gateway's `LoadBalancer` Service in
+`openshift-ingress` is assigned `192.168.10.230` and that the IP answers ARP on
+the LAN.
 
 ### 3. Route Domain And DNS Currently Collide With Default OpenShift Ingress
 
@@ -208,23 +232,31 @@ Authoritative and local DNS tests both resolve
 `test.gateway.apps.sno-ai-lab.vanillax.xyz` to `192.168.10.10`, not `.230`.
 The broader `*.apps...` record currently captures the nested name.
 
-The repo also currently configures the OpenShift Gateway listener and all app
-HTTPRoutes under `*.apps.sno-ai-lab.vanillax.xyz`. Those names therefore point
-at the default OpenShift HostNetwork router on `.10`, not the future Gateway
-API LoadBalancer.
+> **Repo status (working tree):** addressed. The Gateway listener, all 41 app
+> HTTPRoutes, the Argo CD HTTPRoute, the `external-dns` target annotations, and
+> the Argo CD server `url` were moved from `*.apps.sno-ai-lab.vanillax.xyz` to
+> `*.gateway.apps.sno-ai-lab.vanillax.xyz` (single uniform suffix rewrite, 45
+> files). Cloudflare already has
+> `*.gateway.apps.sno-ai-lab.vanillax.xyz -> 192.168.10.230`. Note: a `*.apps`
+> wildcard matches only one label, so per RFC 4592 it should NOT capture
+> `*.gateway.apps` once the more-specific record exists — the earlier
+> "resolves to .10" observation predated that record. Verify with
+> `dig @1.1.1.1 +short A test.gateway.apps.sno-ai-lab.vanillax.xyz` (want
+> `192.168.10.230`).
 
-Recommended direction:
+The repo previously configured the OpenShift Gateway listener and all app
+HTTPRoutes under `*.apps.sno-ai-lab.vanillax.xyz`, which point at the default
+OpenShift HostNetwork router on `.10`, not the Gateway API LoadBalancer. That
+is now fixed (see repo status above).
+
+Standing rules:
 
 - Preserve `*.apps.sno-ai-lab.vanillax.xyz -> 192.168.10.10` for OpenShift
   console, OAuth, and ordinary Route traffic.
-- Give GitOps-managed Gateway API apps a distinct subdomain such as
+- GitOps-managed Gateway API apps live under
   `*.gateway.apps.sno-ai-lab.vanillax.xyz`.
-- Update the Gateway listener, Argo CD URLs, and app HTTPRoutes together.
-- Fix authoritative DNS behavior and verify the chosen Gateway IP before
-  bootstrap.
-
-Do not move the existing default `*.apps...` wildcard away from `.10`; doing so
-would disrupt built-in OpenShift routes.
+- Do not move the existing default `*.apps...` wildcard away from `.10`; doing
+  so would disrupt built-in OpenShift routes.
 
 ### 4. Bootstrap Secrets Are Not Pre-Seeded
 

@@ -9,3 +9,4 @@ spec:
   name: metallb-operator
   source: redhat-operators
   sourceNamespace: openshift-marketplace
+

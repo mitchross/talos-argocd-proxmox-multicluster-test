@@ -23,7 +23,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
-          - name: cert-openshift-apps
+          - name: cert-openshift-gateway-apps
             kind: Secret
             group: ""
       allowedRoutes:

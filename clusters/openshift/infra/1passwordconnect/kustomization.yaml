@@ -2,3 +2,29 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - "../../../../manifests/infra/1passwordconnect/base"
+# OpenShift: the Connect chart hardcodes pod fsGroup/runAsUser/runAsGroup
+# (999 for connect, 65532 for the operator). restricted-v2 rejects fixed UIDs
+# and assigns its own from the namespace range. Strip them (keeping
+# runAsNonRoot + seccompProfile) so the pods are admitted. anyuid is NOT used —
+# it would reject the seccompProfile these charts set.
+patches:
+  - target:
+      kind: Deployment
+      name: onepassword-connect
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/securityContext/runAsUser
+      - op: remove
+        path: /spec/template/spec/securityContext/runAsGroup
+      - op: remove
+        path: /spec/template/spec/securityContext/fsGroup
+  - target:
+      kind: Deployment
+      name: onepassword-connect-operator
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/securityContext/runAsUser
+      - op: remove
+        path: /spec/template/spec/securityContext/runAsGroup
+      - op: remove
+        path: /spec/template/spec/securityContext/fsGroup

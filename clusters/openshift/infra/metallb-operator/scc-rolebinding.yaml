@@ -14,3 +14,19 @@ subjects:
   - kind: ServiceAccount
     name: metallb-speaker
     namespace: metallb-system
+---
+# The metallb controller (not the speaker) hardcodes runAsUser/fsGroup 65534;
+# restricted-v2 rejects fixed UIDs. nonroot-v2 lets it run as designed.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: metallb-controller-nonroot-v2
+  namespace: metallb-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:nonroot-v2
+subjects:
+  - kind: ServiceAccount
+    name: metallb-controller
+    namespace: metallb-system

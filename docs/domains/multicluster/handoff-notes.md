@@ -199,10 +199,9 @@ installing Argo CD. It still cannot prove authoritative DNS, `.230` L2
 advertisement, PVC binding, or app SCC/storage compatibility before the first
 sync.
 
-> **Repo status (working tree):** `subscription.yaml` channel bumped
-> `stable-4.20` -> `stable-4.22`. Namespace left as `openshift-storage` (still
-> valid for LVMS). Live catalog availability on the rc is still unverified —
-> see below.
+> **Repo status:** `subscription.yaml` targets `stable-4.22` to match the live
+> cluster. Namespace remains `openshift-storage`. Live catalog availability on
+> the rc is still unverified; see below.
 
 ### 1. LVM Storage Is Unavailable
 
@@ -214,9 +213,9 @@ sync.
   `lvms-operator` package in the live catalogs.
 - There is no installed LVM CSV, no `LVMCluster` CRD, no TopoLVM API, no LVM
   pods, and no StorageClass.
-- The channel mismatch (repo was `stable-4.20`, cluster is `4.22.0-rc.5`) is
-  now fixed in Git, **but** on a pre-GA `rc` build the `redhat-operators`
-  catalog may not yet publish LVMS at all — which would still produce
+- Repo manifest now targets channel `stable-4.22` to match the live
+  `4.22.0-rc.5` cluster, but on a pre-GA `rc` build the `redhat-operators`
+  catalog may not yet publish LVMS at all, which would still produce
   `ResolutionFailed`. Verify before bootstrap:
   `oc get packagemanifest lvms-operator -n openshift-marketplace -o jsonpath='{.status.channels[*].name}'`.
   If `stable-4.22` is absent, wait for 4.22 GA or point at a pre-GA catalog.

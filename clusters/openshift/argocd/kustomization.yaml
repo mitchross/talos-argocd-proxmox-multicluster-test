@@ -2,6 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - projects.yaml
+  - scc-defaults.yaml
   - bootstrap/argocd.yaml
   - bootstrap/1passwordconnect.yaml
   - bootstrap/external-secrets.yaml

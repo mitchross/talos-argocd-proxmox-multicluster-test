@@ -1,0 +1,28 @@
+# Homelab-wide SCC default for OpenShift.
+#
+# This is a SINGLE-OPERATOR homelab, not a multi-tenant cluster. The Talos-origin
+# Helm charts in this repo hardcode non-root UIDs/fsGroups (999, 65534, ...),
+# which OpenShift's default restricted-v2 SCC rejects (it assigns its own UID).
+# Rather than patch every chart, grant the built-in `nonroot-v2` SCC to ALL
+# service accounts. nonroot-v2 still REQUIRES non-root + RuntimeDefault seccomp +
+# no privilege escalation + dropped caps — it only relaxes the fixed-UID/fsGroup
+# rule. It does NOT grant root, privileged, hostPath, or hostNetwork; those few
+# workloads (CSI nodes, metallb speaker) keep their own explicit, narrower SCC
+# bindings.
+#
+# Applied at sync-wave -1 so it is in place before any workload pods are created.
+# Tighten or remove this before the cluster ever hosts untrusted authors.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: homelab-nonroot-v2-all-serviceaccounts
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:nonroot-v2
+subjects:
+  - kind: Group
+    name: system:serviceaccounts
+    apiGroup: rbac.authorization.k8s.io

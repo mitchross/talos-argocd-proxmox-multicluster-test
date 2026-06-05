@@ -274,6 +274,19 @@ notifications:
 # utilization percentages, leading to unnecessary scale events.
 hpa:
   enabled: false
+# OpenShift: the argo-cd chart hardcodes the redis pod securityContext with
+# runAsUser: 999, which the restricted-v2 SCC rejects (it assigns a UID from
+# the namespace's allowed range). `openshift.enabled: true` does NOT clear the
+# redis securityContext (chart gap — argoproj/argo-helm#324, argo-cd#8731), so
+# null runAsUser here. Keep seccompProfile RuntimeDefault (restricted-v2
+# requires it). No anyuid SCC grant needed once this is in place.
+redis:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: null
+    seccompProfile:
+      type: RuntimeDefault
+
 # Disable the redis-secret-init PreSync hook. The Job creates the redis
 # auth secret on first install; once created, it persists in the cluster
 # and the chart re-runs the Job on every sync as a hook. On chart

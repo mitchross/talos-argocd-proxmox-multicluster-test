@@ -40,6 +40,7 @@ clusters/
     argocd/          # OpenShift root app-of-apps tree
     apps/            # OpenShift application overlays and routes
     infra/           # OpenShift infrastructure entrypoints
+    database/        # OpenShift CNPG database entrypoints
 
 manifests/
   apps/**/base/      # shared application resources
@@ -76,7 +77,7 @@ graph TD;
         OsBootstrap --> OsArgo["Argo CD in argocd namespace"];
         OsArgo --> OsRoot["clusters/openshift/bootstrap/root.yaml"];
         OsRoot --> OsTree["clusters/openshift/argocd"];
-        OsTree --> OsTargets["clusters/openshift/{apps,infra}"];
+        OsTree --> OsTargets["clusters/openshift/{apps,infra,database}"];
     end
 ```
 
@@ -99,10 +100,16 @@ OpenShift:
 | Wave | Component | Purpose |
 |------|-----------|---------|
 | **0** | Foundation | Argo CD, 1Password Connect, External Secrets, AppProjects |
-| **1** | Core controllers | cert-manager, OpenShift LVM storage, and MetalLB operator |
+| **1** | Core controllers | cert-manager, democratic-csi (TrueNAS storage), local-path-provisioner, MetalLB (upstream Helm) |
 | **2** | Load balancer config | MetalLB address pool and L2 advertisement |
-| **4** | Infrastructure | OpenShift Gateway API and shared storage overlays |
+| **4** | Infrastructure | OpenShift Gateway API |
+| **5** | Database | CNPG operator + Postgres clusters (gitea/immich/paperless/temporal) |
 | **6** | Apps | Full app catalog through OpenShift overlays |
+
+> OpenShift uses **no OLM operators**. The 4.22.0-rc.5 redhat-operators catalog
+> publishes neither `lvms-operator` nor `metallb-operator`, so storage
+> (democratic-csi), load-balancing (MetalLB), and the database operator (CNPG)
+> are all installed via upstream **Helm charts**.
 
 ## Prerequisites
 
@@ -117,14 +124,15 @@ OpenShift optional path:
 
 1. **OpenShift cluster access** - `kubectl` or `oc` points at the target OpenShift cluster.
 2. **Gateway API available** - OpenShift/OKD owns the CRDs and implementation; Git declares `openshift-default`.
-3. **OLM available** - required for the starter LVM Storage and MetalLB Operator Subscriptions.
+3. **TrueNAS reachable + prepared** - 192.168.10.133 with an API key, iSCSI + NFS services, and the parent ZFS datasets democratic-csi provisions into (see `clusters/openshift/infra/democratic-csi/README.md`). No OLM is required.
 4. **Gateway DNS split** - keep default `*.apps.sno-ai-lab.vanillax.xyz` on the OpenShift router and use `*.gateway.apps.sno-ai-lab.vanillax.xyz` for GitOps-managed Gateway API apps.
 5. **Local tools installed** - `kubectl`, `kustomize`, Helm, and `op`.
 
 OpenShift storage policy:
 
-- Use `vanillax-local-rwo` for ordinary local PVCs: Longhorn on Talos and LVM Storage on OpenShift.
-- Use the shared NFS and SMB CSI bases for explicit external shares and datasets.
+- Use `vanillax-local-rwo` for ordinary local PVCs: Longhorn on Talos, **TrueNAS iSCSI via democratic-csi** on OpenShift.
+- For data that should stay node-local with no NAS dependency, use the non-default `local-path` class; for ephemeral/scratch use `emptyDir` (or `emptyDir{medium: Memory}`).
+- Use the shared NFS and SMB CSI bases (or the dynamic `truenas-nfs-csi` class) for external shares and RWX datasets.
 - All apps have OpenShift overlays for catalog-level testing, but large stateful apps still need explicit capacity, SCC, external-storage, and backup review before being considered production-ready.
 
 See [OpenShift Storage And App Migration Strategy](docs/domains/multicluster/openshift-storage-and-app-migration.md).
@@ -306,15 +314,18 @@ OpenShift uses the same model: hand-run upstream Helm Argo CD, then let that
 cluster's local Argo CD manage only itself. It does not use the OpenShift GitOps
 Operator.
 
-> **Current `sno-ai-lab` status (June 4, 2026): do not bootstrap yet.**
-> Read [the canonical multicluster handoff](docs/domains/multicluster/handoff-notes.md)
-> first. The live `4.22.0-rc.5` cluster has no usable LVM Storage operator or
-> StorageClass, no live-proven MetalLB/Gateway LoadBalancer publishing, and no
-> pre-seeded bootstrap secrets. Git now declares MetalLB and the dedicated
-> `*.gateway.apps.sno-ai-lab.vanillax.xyz` route domain, but the live cluster
-> still needs authoritative DNS, `.230` L2 advertisement, and operator-catalog
-> verification before bootstrap. A June 5, 2026 read-only PackageManifest check
-> did not find `lvms-operator` or `metallb-operator` in the live catalogs.
+> **Current `sno-ai-lab` status (June 5, 2026): Git is ready; finish the live
+> prerequisites first.** Read [the canonical multicluster handoff](docs/domains/multicluster/handoff-notes.md)
+> first. Git no longer depends on any OLM operator — storage (democratic-csi),
+> load-balancing (MetalLB), and the database operator (CNPG) are all Helm. The
+> remaining **live** prerequisites before `bootstrap-cluster.sh openshift`:
+> 1. TrueNAS prepared (API key, iSCSI/NFS services, parent datasets) and the two
+>    `democratic-csi-truenas-{iscsi,nfs}` items added to the `homelab-prod` vault.
+> 2. The three Connect bootstrap secrets pre-seeded (same as Talos Step 3).
+> 3. Authoritative DNS: `*.gateway.apps.sno-ai-lab.vanillax.xyz` → `192.168.10.230`.
+>
+> `.230` does not need to be reachable *before* bootstrap — MetalLB claims and
+> advertises it once the speaker syncs (wave 1-2). Verify it *after*.
 
 ### Step 0: Get Cluster Access
 
@@ -335,36 +346,30 @@ kubectl get crd gatewayclasses.gateway.networking.k8s.io
 kubectl get crd gateways.gateway.networking.k8s.io
 kubectl get crd httproutes.gateway.networking.k8s.io
 kubectl get gatewayclass,gateway -A
-kubectl get subscriptions.operators.coreos.com -A
-kubectl get subscription lvms-operator -n openshift-storage -o yaml
-kubectl get subscription metallb-operator -n metallb-system -o yaml
-kubectl get crd | grep -Ei 'lvm|topolvm'
-kubectl get crd | grep -Ei 'metallb|gateway'
-kubectl get storageclass
+kubectl get subscriptions.operators.coreos.com -A   # expect NONE we depend on
+kubectl get storageclass                            # none yet; created at wave 1
 kubectl get svc -A -o wide | grep LoadBalancer
-dig @1.1.1.1 +short A test.gateway.apps.sno-ai-lab.vanillax.xyz
+dig @1.1.1.1 +short A test.gateway.apps.sno-ai-lab.vanillax.xyz   # want 192.168.10.230
 ```
 
 Git owns GatewayClass `openshift-default` with controller
 `openshift.io/gateway-controller/v1`. Do not install upstream Gateway API CRDs
 or Cilium on OpenShift. Resolve any conflicting Service Mesh Operator v2
-subscription before bootstrap.
+subscription before bootstrap (the GatewayClass auto-installs a lightweight
+mesh; do not install `servicemeshoperator` yourself).
 
-The OpenShift LVM storage entrypoint assumes the Red Hat `lvms-operator`
-Subscription and `lvm.topolvm.io/v1alpha1` `LVMCluster` schema. Verify those
-against the live cluster before syncing.
-
-The OpenShift bootstrap wrapper now verifies the `lvms-operator` and
-`metallb-operator` PackageManifests are visible before installing Argo CD.
-If either package is missing, fix OperatorHub/catalog availability or adjust
-the Git package/channel names before bootstrap.
+No OLM PackageManifests are required — storage, load-balancing, and the
+database operator are all Helm-installed, so there are no `lvms-operator` /
+`metallb-operator` subscriptions to verify. The bootstrap wrapper no longer
+gates on them.
 
 The repo keeps OpenShift's default `*.apps.sno-ai-lab.vanillax.xyz` wildcard
 reserved for console, OAuth, and ordinary Route traffic on `192.168.10.10`.
 GitOps-managed Gateway API apps use
 `*.gateway.apps.sno-ai-lab.vanillax.xyz`, backed by the MetalLB pool
-`192.168.10.230-192.168.10.240`. Prove authoritative DNS and `.230`
-reachability before bootstrap.
+`192.168.10.230-192.168.10.240`. Prove authoritative DNS resolves to `.230`
+before bootstrap; `.230` itself becomes reachable once MetalLB's speaker syncs
+and the Gateway's LoadBalancer Service claims it (verify after bootstrap).
 
 ### Step 2: Pre-Seed 1Password Secrets
 

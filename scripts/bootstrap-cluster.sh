@@ -122,9 +122,13 @@ verify_openshift_package() {
 }
 
 verify_openshift_operator_packages() {
-  echo "Verifying required OpenShift OLM PackageManifests..."
-  verify_openshift_package lvms-operator
-  verify_openshift_package metallb-operator
+  # No OLM PackageManifests are required anymore. Both pieces that used to be
+  # OLM operators are now Helm-installed (the 4.22-rc redhat-operators catalog
+  # publishes neither): storage = democratic-csi (Helm CSI → TrueNAS),
+  # load-balancer = upstream MetalLB Helm chart. CNPG is also a Helm chart.
+  # Kept as a no-op so the bootstrap call site is stable; re-add
+  # verify_openshift_package <name> here if a future component needs OLM.
+  echo "OLM PackageManifests: none required (storage/LB/DB are Helm-installed)."
 }
 
 verify_secret_gate() {
@@ -173,8 +177,8 @@ print_dry_run() {
     echo "Cilium: skipped for OpenShift"
     echo "Gateway API: verify platform CRDs"
     echo "OSSM v2: verify no conflicting subscription"
-    echo "OLM packages: verify lvms-operator and metallb-operator are visible"
-    echo "MetalLB: Git manages operator/config after Argo root sync (192.168.10.230-192.168.10.240)"
+    echo "OLM packages: none required (storage/LB/DB are Helm-installed)"
+    echo "MetalLB: upstream Helm chart + config via Argo (192.168.10.230-192.168.10.240)"
     echo "Gateway DNS: use *.gateway.apps.sno-ai-lab.vanillax.xyz, not the default *.apps router wildcard"
   fi
 

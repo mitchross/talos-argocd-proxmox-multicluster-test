@@ -1,11 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: lvm-storage
+  name: local-path-provisioner
   namespace: argocd
   annotations:
+    # Wave 1 alongside the other storage. The MachineConfig it ships REBOOTS
+    # the single node once on first apply (API unavailable ~5 min); that is
+    # expected during initial bootstrap and Argo resumes afterward.
     argocd.argoproj.io/sync-wave: "1"
-    argocd.argoproj.io/manifest-generate-paths: ".;/manifests/infra"
+    argocd.argoproj.io/manifest-generate-paths: ".;/clusters/openshift/infra/local-path-provisioner"
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
@@ -13,10 +16,10 @@ spec:
   source:
     repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
     targetRevision: main
-    path: clusters/openshift/infra/lvm-storage
+    path: clusters/openshift/infra/local-path-provisioner
   destination:
     server: https://kubernetes.default.svc
-    namespace: openshift-storage
+    namespace: local-path-storage
   syncPolicy:
     automated:
       prune: true

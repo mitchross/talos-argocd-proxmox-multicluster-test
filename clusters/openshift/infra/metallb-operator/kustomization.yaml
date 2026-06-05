@@ -1,7 +1,20 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+# MetalLB install — UPSTREAM Helm chart, NOT the Red Hat OLM metallb-operator.
+# The 4.22.0-rc.5 redhat-operators catalog does not publish metallb-operator
+# (verified June 5 2026), so the OLM Subscription could never resolve — same
+# catalog gap that moved storage to democratic-csi. The Helm chart deploys the
+# controller + speaker directly (no `kind: MetalLB` CR needed). L2 mode only;
+# BGP/FRR backend disabled (see values.yaml). Dir name kept for continuity with
+# the existing core-dependency app wiring.
+helmCharts:
+  - name: metallb
+    repo: https://metallb.github.io/metallb
+    version: 0.16.1
+    releaseName: metallb
+    namespace: metallb-system
+    includeCRDs: true
+    valuesFile: values.yaml
 resources:
   - namespace.yaml
-  - operatorgroup.yaml
-  - subscription.yaml
-
+  - scc-rolebinding.yaml

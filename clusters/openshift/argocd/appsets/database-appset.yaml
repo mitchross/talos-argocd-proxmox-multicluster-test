@@ -1,0 +1,59 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: openshift-database
+  namespace: argocd
+  annotations:
+    # After infra (gateway/storage waves 1-4), before the apps AppSet (wave 6)
+    # so the CNPG operator + clusters exist before DB-backed apps start.
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
+        revision: main
+        files:
+          - path: clusters/openshift/database/*/*/.argocd/config.json
+  template:
+    metadata:
+      name: "{{.applicationName}}"
+      annotations:
+        argocd.argoproj.io/manifest-generate-paths: "."
+        # operator config.json carries syncWave 3, clusters 4 — operator (and
+        # its CRDs) install before the Cluster apps.
+        argocd.argoproj.io/sync-wave: "{{.syncWave}}"
+      labels:
+        app.kubernetes.io/part-of: database
+    spec:
+      project: "{{.project}}"
+      revisionHistoryLimit: 3
+      source:
+        repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
+        targetRevision: main
+        path: "{{.sourcePath}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{.namespace}}"
+      syncPolicy:
+        automated:
+          prune: true
+          # DB convention (matches Talos): selfHeal off so manual
+          # skip-reconcile/recovery annotations stick during DR.
+          selfHeal: false
+          allowEmpty: false
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+          - RespectIgnoreDifferences=true
+          - Replace=false
+          # Cluster apps may sync before the operator's CRDs exist; tolerate
+          # and let retry reconcile.
+          - SkipDryRunOnMissingResource=true
+        retry:
+          limit: 10
+          backoff:
+            duration: 10s
+            factor: 2
+            maxDuration: 10m

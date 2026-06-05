@@ -69,7 +69,11 @@ instances are independent.
   `openshift.io/gateway-controller/v1`.
 - Portable local PVCs use `vanillax-local-rwo`.
 - Talos implements portable local storage with Longhorn.
-- OpenShift implements portable local storage with LVM Storage.
+- OpenShift implements portable `vanillax-local-rwo` with democratic-csi
+  (Helm CSI driver) backed by TrueNAS iSCSI — NOT the LVMS operator, which the
+  `4.22.0-rc.5` `redhat-operators` catalog does not publish. A dynamic
+  `truenas-nfs-csi` RWX class is added alongside the kept static NFS/SMB CSI.
+  See `clusters/openshift/infra/democratic-csi/`.
 - NFS and SMB CSI are shared bases consumed by both clusters.
 - Talos backup/restore policy is removed from OpenShift app renders.
 - OpenShift does not install Cilium, Longhorn, VolSync, or pvc-plumber.
@@ -115,8 +119,9 @@ Implementation commits:
 
 All apps render through OpenShift overlays, but render success is not the same
 as production readiness. Before live sync, verify the OpenShift GatewayClass,
-LVM schema and portable StorageClass, CSI driver SCC behavior, application SCC
-behavior, external storage reachability, and backup expectations.
+democratic-csi driver health and the `vanillax-local-rwo` StorageClass binding,
+CSI driver SCC behavior, application SCC behavior, TrueNAS (`192.168.10.133`)
+reachability, and backup expectations.
 
 ## Verified Live OpenShift State
 
@@ -199,53 +204,116 @@ installing Argo CD. It still cannot prove authoritative DNS, `.230` L2
 advertisement, PVC binding, or app SCC/storage compatibility before the first
 sync.
 
-> **Repo status:** `subscription.yaml` targets `stable-4.22` to match the live
-> cluster. Namespace remains `openshift-storage`. Live catalog availability on
-> the rc is still unverified; see below.
+> **Repo status:** RESOLVED in Git by replacing LVMS with democratic-csi. The
+> `clusters/openshift/infra/lvm-storage` component and its core-dependency app
+> were removed; `clusters/openshift/infra/democratic-csi` now backs
+> `vanillax-local-rwo`. Live verification (TrueNAS reachability + PVC bind)
+> still pending.
 
-### 1. LVM Storage Is Unavailable
+### 1. Local Storage — LVMS replaced by democratic-csi (TrueNAS)
 
-- Live `Subscription/openshift-storage/lvms-operator` was
-  `ResolutionFailed`.
-- Failure message: no operators found in package `lvms-operator` in the
-  referenced `redhat-operators` catalog.
-- June 5, 2026 read-only PackageManifest lookup also found no
-  `lvms-operator` package in the live catalogs.
-- There is no installed LVM CSV, no `LVMCluster` CRD, no TopoLVM API, no LVM
-  pods, and no StorageClass.
-- Repo manifest now targets channel `stable-4.22` to match the live
-  `4.22.0-rc.5` cluster, but on a pre-GA `rc` build the `redhat-operators`
-  catalog may not yet publish LVMS at all, which would still produce
-  `ResolutionFailed`. Verify before bootstrap:
-  `oc get packagemanifest lvms-operator -n openshift-marketplace -o jsonpath='{.status.channels[*].name}'`.
-  If `stable-4.22` is absent, wait for 4.22 GA or point at a pre-GA catalog.
-- Repo uses namespace `openshift-storage`; current Red Hat 4.20 documentation
-  describes `openshift-lvm-storage` as the default namespace. Either works;
-  confirm the supported 4.22 namespace if you change it.
+- **Root cause (why LVMS was dropped):** `lvms-operator` is an OLM operator,
+  and the June 5, 2026 PackageManifest lookup found it absent from the live
+  `4.22.0-rc.5` catalogs. A channel bump cannot fix a package the catalog does
+  not publish. RHCOS immutability also makes the required host LVM volume group
+  awkward.
+- **Resolution:** `vanillax-local-rwo` is now backed by **democratic-csi**, a
+  Helm CSI driver (no OLM dependency) provisioning **TrueNAS iSCSI** zvols on
+  `192.168.10.133` (the same NAS the Talos cluster uses, 10G). A dynamic
+  `truenas-nfs-csi` RWX class is added; static NFS/SMB CSI is kept. See
+  `clusters/openshift/infra/democratic-csi/README.md`.
+- A node-local `local-path` StorageClass
+  (`clusters/openshift/infra/local-path-provisioner/`) is added as a
+  non-default tier for persistent data that should NOT depend on TrueNAS. It
+  ships a `MachineConfig` that creates + SELinux-labels
+  `/opt/local-path-provisioner` and **reboots the SNO node once** on first
+  apply. Ephemeral workloads should use `emptyDir`/`emptyDir{medium: Memory}`.
+- **Remaining before bootstrap (live, not Git):**
+  1. Pre-seed two 1Password items holding the driver config YAML —
+     `democratic-csi-truenas-iscsi` and `democratic-csi-truenas-nfs`, each a
+     `config` field (TrueNAS API key + pool/dataset + iSCSI portal). Template
+     in the component README.
+  2. Create the TrueNAS API key and the parent ZFS datasets referenced in the
+     config.
+  3. After sync, prove a `vanillax-local-rwo` PVC binds (README has a test).
+- democratic-csi is Helm-rendered via kustomize `--enable-helm` from
+  `https://democratic-csi.github.io/charts/` (chart `0.15.1`), same mechanism
+  the repo already uses for `csi-driver-nfs`.
 
-Until this is resolved, every OpenShift app PVC using
-`vanillax-local-rwo` will remain Pending.
+#### OpenShift storage-tier placement policy
+
+Applied per-PVC via the existing `clusters/openshift/apps/*/*/patches/
+remove-talos-backup-persistentvolumeclaim-*.yaml` strategic-merge patches
+(base stays portable `vanillax-local-rwo`; only the OpenShift overlay changes
+`storageClassName`). Talos is unaffected — it keeps Longhorn.
+
+- **RWO, > 20Gi → `vanillax-local-rwo`** (TrueNAS iSCSI). No patch needed; it is
+  already the base class and the OpenShift default. (swarmui dlbackend/output,
+  gitea-actions cache, posthog clickhouse, nomad-storage, zomboid server-files,
+  immich library.)
+- **RWO, ≤ 20Gi → `local-path`** (node-local, no TrueNAS dependency). 31 PVCs
+  patched.
+- **radar-ng (5 PVCs) → `truenas-nfs-csi`, kept RWX.** radar-ng genuinely
+  shares volumes across many pods (workers write tiles/grids; tile-servers
+  read) — confirmed in `/home/vanillax/programming/radar-ng` `docs/PLAN.md`.
+  On multi-node Talos that needs Longhorn RWX; on single-node OpenShift RWO
+  would technically suffice (all pods co-locate), but NFS is the faithful port
+  and the volumes are large.
+- **Already NFS/SMB (comfyui, llama-cpp, swarmui-models, frigate-media, kiwix,
+  tubesync media, jellyfin/immich media)** → unchanged.
+- **CNPG (gitea/immich/paperless/temporal)** → BUILT at
+  `clusters/openshift/database/cloudnative-pg/` (operator decision
+  2026-06-05). It is a **simplified port** of the Talos tree, not a verbatim
+  copy:
+  - **Operator**: same Helm chart `cloudnative-pg/charts` `0.28.0` (no OLM, no
+    catalog gap), RBAC + CRD SSA patches copied as-is; the backup-cleanup
+    CronJob was dropped.
+  - **4 Clusters**: `initdb` only (fresh DBs), `storageClass: local-path` for
+    both data and WAL, `enablePodMonitor: false`. immich keeps its vchord
+    image + extension postInit; temporal keeps `temporal_visibility`; the
+    Talos recovery/initdb overlay machinery is collapsed to initdb.
+  - **Dropped vs Talos**: Barman/S3 backups (ObjectStore, ScheduledBackup,
+    `spec.plugins`), the recovery overlays, and paperless's Cilium
+    LoadBalancer (`192.168.10.42`). So **OpenShift Postgres has NO automated
+    backup yet** — DR is a follow-up (add the Barman plugin + ObjectStore +
+    `cnpg-s3-credentials` if/when wanted; RustFS at `192.168.10.133:30292`).
+  - Discovered by a new `openshift-database` AppSet (wave 5, `selfHeal:false`),
+    project `openshift-infrastructure`, namespace `cloudnative-pg`.
+  - **Live TODO before it works**: (1) the per-DB ExternalSecrets read the
+    `postgres-secrets` 1Password item (`<app>_db_username`/`_password`) — the
+    same item Talos uses, so confirm the OpenShift ClusterSecretStore can read
+    it. (2) Verify CNPG pods run under OpenShift SCC (CNPG targets
+    `restricted-v2`; no special SCC was added — watch the first sync).
+
+Note: RWO restricts to a single *node*, not a single *pod* — on SNO multiple
+pods co-locate, so `local-path`/iSCSI RWO volumes can be shared by several
+pods. RWX is only mechanically required across nodes.
 
 ### 2. Gateway LoadBalancer Publishing Is Declared But Not Live-Proven
 
 - The OpenShift Gateway implementation provisions a `LoadBalancer` Service for
   each Gateway. The GatewayClass auto-installs only the mesh control plane; the
   data-plane Service stays `Pending` forever without an LB provider.
-- The live bare-metal/platform-None cluster had no LoadBalancer Services,
-  MetalLB APIs, MetalLB subscription, or other observed load-balancer provider.
-- `192.168.10.230` is not currently reachable from the operator workstation;
-  ARP resolution reports `FAILED`.
-- Git now declares the MetalLB operator and config:
-  - `clusters/openshift/infra/metallb-operator`
-  - `clusters/openshift/infra/metallb-config`
-  - pool `192.168.10.230-192.168.10.240`
-- June 5, 2026 read-only PackageManifest lookup found no `metallb-operator`
-  package in the live catalogs, so the current Git declaration would not
-  resolve on this cluster yet.
+- The live bare-metal/platform-None cluster has no built-in LoadBalancer
+  provider. OpenShift ships a Router (HostNetwork on `.10`, serves `Route`s),
+  NOT a generic `type: LoadBalancer` implementation — that is why Gateway API
+  (which creates a LoadBalancer Service) needs one and ordinary Routes do not.
+- **Resolution (2026-06-05):** MetalLB is installed via the **upstream Helm
+  chart** (`metallb/metallb` `0.16.1`), NOT the Red Hat OLM `metallb-operator`
+  — the June 5 PackageManifest lookup found `metallb-operator` absent from the
+  `4.22.0-rc.5` catalog, the same gap that moved storage to democratic-csi.
+  - `clusters/openshift/infra/metallb-operator` — Helm chart (controller +
+    speaker), L2-only (`frrk8s`/BGP disabled), privileged namespace + a
+    ClusterRoleBinding granting the `metallb-speaker` SA the `privileged` SCC
+    (the chart, unlike the operator, does not create SCCs). No `kind: MetalLB`
+    CR (operator-only concept).
+  - `clusters/openshift/infra/metallb-config` — `IPAddressPool gateway-pool`
+    `192.168.10.230-192.168.10.240` + `L2Advertisement` only.
+- `192.168.10.230` was not reachable pre-install (ARP `FAILED`); expected until
+  the speaker advertises it.
 
-Before Gateway sync is considered ready, verify the Red Hat MetalLB package and
-channel on OpenShift `4.22.0-rc.5`, then prove `.230` is advertised and
-reachable.
+Before Gateway sync is considered ready, prove `.230` is advertised (ARP) and
+reachable after the speaker is running.
 
 ### 3. Route Domain And DNS Currently Collide With Default OpenShift Ingress
 
@@ -282,27 +350,47 @@ Standing rules:
 
 ### 4. Bootstrap Secrets Are Not Pre-Seeded
 
-The live cluster has none of:
+**Single source of truth for secrets (decision 2026-06-05):** both clusters use
+the *identical* shared bases `manifests/infra/external-secrets/base` (defines
+`ClusterSecretStore/1password` → vault **`homelab-prod`**) and
+`manifests/infra/1passwordconnect/base`. Same store, same vault, same provider
+config on Talos and OpenShift — every ExternalSecret resolves from the one
+vault. Nothing cluster-specific in Git.
+
+So the OpenShift bootstrap secret step is **the same as Talos** — seed the same
+three Connect credential secrets (same values: same Connect token + vault):
 
 ```text
-1passwordconnect/1password-credentials
-1passwordconnect/1password-operator-token
-external-secrets/1passwordconnect
+1passwordconnect/1password-credentials      # 1password-credentials.json
+1passwordconnect/1password-operator-token   # operator token
+external-secrets/1passwordconnect           # Connect token for ESO (key: token)
 ```
 
-This is expected on the fresh cluster. Pre-seed them only after the storage,
-Gateway publishing, and route-domain decisions above are resolved.
+The shared `homelab-prod` vault already contains everything OpenShift
+references (`postgres-secrets` with the 4 `<app>_db_*` fields,
+`argocd-github-webhook`, and all app items — Talos populated them) EXCEPT the
+two items introduced for OpenShift storage, which must be added once:
+
+```text
+democratic-csi-truenas-iscsi   # field: config  (iSCSI driver YAML)
+democratic-csi-truenas-nfs     # field: config  (NFS driver YAML)
+```
+
+Pre-seed the three Connect secrets after the storage, Gateway publishing, and
+route-domain items above are resolved.
 
 ## Safe Next Actions
 
-1. Resolve LVM Storage for OpenShift `4.22.0-rc.5` and prove that
-   `vanillax-local-rwo` can bind a test PVC.
-2. Verify the Git-declared MetalLB operator/config works on OpenShift
-   `4.22.0-rc.5`, then prove `192.168.10.230` is reachable.
+1. Create the TrueNAS API key + parent ZFS datasets, seed the two
+   `democratic-csi-truenas-{iscsi,nfs}` 1Password items, then after sync prove
+   a `vanillax-local-rwo` PVC binds (see democratic-csi README).
+2. MetalLB is now the upstream Helm chart (no OLM) — after sync, confirm the
+   `metallb-controller` + `metallb-speaker` pods are healthy and prove
+   `192.168.10.230` is advertised (ARP) and reachable on the LAN.
 3. Verify authoritative DNS resolves
    `test.gateway.apps.sno-ai-lab.vanillax.xyz` to `192.168.10.230`.
 4. Re-run read-only preflight checks.
-5. Pre-seed the three 1Password secrets.
+5. Pre-seed the three 1Password bootstrap secrets.
 6. Clone the isolated test repository and run
    `./scripts/bootstrap-cluster.sh openshift` with
    `KUBECONFIG=/home/vanillax/Downloads/sno-ai-lab-kubeconfig`.

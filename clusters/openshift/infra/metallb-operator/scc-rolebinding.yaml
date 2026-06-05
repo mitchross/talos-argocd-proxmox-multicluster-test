@@ -1,0 +1,16 @@
+# The upstream Helm chart does NOT create OpenShift SCCs (the Red Hat operator
+# did). The speaker DaemonSet needs hostNetwork + NET_RAW/NET_ADMIN, so bind
+# its ServiceAccount to the built-in privileged SCC. The controller runs fine
+# under the default restricted-v2 SCC and is not bound here.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: metallb-speaker-privileged
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:privileged
+subjects:
+  - kind: ServiceAccount
+    name: metallb-speaker
+    namespace: metallb-system

@@ -119,7 +119,15 @@ docs/                   # Documentation
 - Add backups to a normal application PVC with the pvc-plumber v4.0.1 contract: add the namespace software gate `pvc-plumber.io/managed-namespace: "true"`, the PVC fuse labels `pvc-plumber.io/enabled`, `pvc-plumber.io/manage-volsync`, and `pvc-plumber.io/tier`, and a static `dataSourceRef` pointing to `<pvc-name>-dst`. pvc-plumber owns RS/RD; VolSync and Kopia move bytes. See `.claude/commands/add-backup.md`.
 - When marking a PVC `backup-exempt: "true"`, the reason annotation key **must be fully qualified**: `storage.vanillax.dev/backup-exempt-reason`. The bare `backup-exempt-reason` is silently ignored by the operator and the PVC is **denied on CREATE** — invisible until recreate/DR. CI job `backup-exempt-contract` enforces this
 - Use portable `storageClassName: vanillax-local-rwo` in shared app sources;
-  Talos maps it to Longhorn and OpenShift intends to map it to LVM Storage
+  Talos maps it to Longhorn and OpenShift maps it to TrueNAS iSCSI via
+  democratic-csi (a Helm CSI driver — NOT the LVMS operator, which the
+  `4.22.0-rc.5` `redhat-operators` catalog does not publish). See
+  `clusters/openshift/infra/democratic-csi/`. OpenShift also gets a dynamic
+  `truenas-nfs-csi` RWX class; the static `csi-driver-nfs`/`smb` shares remain
+  for media apps with pre-existing data. A node-local `local-path` class
+  (`clusters/openshift/infra/local-path-provisioner/`, hostPath, NOT default,
+  no TrueNAS dependency) is available for persistent data that should stay on
+  the node; use `emptyDir`/`emptyDir{medium: Memory}` for ephemeral/scratch.
 - Use NFS CSI driver (`csi: driver: nfs.csi.k8s.io`) for static NFS PVs — **legacy `nfs:` silently ignores mountOptions**
 - Add explicit infrastructure metadata/entrypoints under the owning
   `clusters/<cluster>/infra` tree and update that cluster's Argo entrypoint

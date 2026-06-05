@@ -12,12 +12,13 @@ helm install upstream Argo CD -> apply root Application -> local Argo CD self-ma
 
 > **Live `sno-ai-lab` bootstrap is blocked as of June 4, 2026.**
 > Read `docs/domains/multicluster/handoff-notes.md` before running any command
-> below. The live cluster has unresolved LVM Storage, unverified MetalLB/Gateway
-> LoadBalancer publishing, and no pre-seeded 1Password secrets. Git declares
-> MetalLB and `*.gateway.apps.sno-ai-lab.vanillax.xyz`, but the profile wrapper
-> does not currently prove `.230` advertisement or authoritative DNS before
-> installing Argo CD. It does block on missing `lvms-operator` and
-> `metallb-operator` PackageManifests.
+> below. Storage (democratic-csi), load-balancing (MetalLB) and Postgres
+> (CNPG) are all **Helm-installed now** — no OLM operators — so the
+> unresolvable `lvms-operator`/`metallb-operator` catalog gap is gone. What
+> remains live-unverified: `.230` L2 advertisement, authoritative DNS for
+> `*.gateway.apps.sno-ai-lab.vanillax.xyz`, the three Connect bootstrap secrets,
+> and the two TrueNAS driver-config 1Password items. The profile wrapper does
+> not prove `.230`/DNS before installing Argo CD.
 
 Use the repo-level script from the repository root:
 
@@ -30,18 +31,17 @@ The profile wrapper:
 - `kubectl` or `oc` points at the intended OpenShift cluster.
 - verifies OpenShift-managed Gateway API CRDs;
 - rejects a conflicting Service Mesh Operator v2 subscription;
-- verifies `lvms-operator` and `metallb-operator` PackageManifests are visible;
+- requires no OLM PackageManifests (storage/LB/DB are all Helm-installed);
 - never installs Cilium or upstream Gateway API CRDs;
 - verifies the three pre-seeded 1Password secrets;
 - calls `scripts/bootstrap-argocd.sh openshift` after prerequisites pass.
 
 Git owns GatewayClass `openshift-default` with controller
-`openshift.io/gateway-controller/v1`, MetalLB operator/config manifests, and
-the dedicated Gateway app domain
-`*.gateway.apps.sno-ai-lab.vanillax.xyz`. The LVM Storage Operator channel,
-`LVMCluster` schema, MetalLB channel, and `.230` L2 advertisement still require
-live verification. As of the June 5, 2026 read-only check, the live catalogs
-do not expose `lvms-operator` or `metallb-operator`.
+`openshift.io/gateway-controller/v1`, MetalLB operator/config manifests, the
+democratic-csi storage component, the upstream MetalLB Helm chart + config, the
+CNPG database tree, and the dedicated Gateway app domain
+`*.gateway.apps.sno-ai-lab.vanillax.xyz`. Only the `.230` L2 advertisement and
+authoritative DNS still require live verification.
 
 The original feature branch points Argo CD at the original repository's
 `main`. Use the isolated test repository's `main` branch for live OpenShift

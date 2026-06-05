@@ -7,3 +7,5 @@ metadata:
     backup-exempt:
   annotations:
     storage.vanillax.dev/backup-exempt-reason:
+spec:
+  storageClassName: local-path

@@ -1,0 +1,45 @@
+# Base CNPG Cluster manifest — NO bootstrap stanza.
+# Overlays (overlays/initdb, overlays/recovery) supply the bootstrap
+# via strategic-merge patch.
+#
+# serverName encodes the FORWARD write target (current lineage). On
+# fresh-nuke recovery, set this to the NEXT lineage so post-restore
+# backups don't append to the polluted current-lineage directory on S3.
+# Bump this whenever you trigger a new recovery — keep in sync with the
+# recovery overlay's externalClusters (which points at the PRIOR lineage).
+#
+# Plugin-mode backup config (replaces deprecated spec.backup.barmanObjectStore;
+# removed in CNPG 1.30.0). The S3 destination + retention live on a sibling
+# ObjectStore CR (base/objectstore.yaml). Migration plan:
+# docs/plans/cnpg-plugin-migration.md.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: gitea-database
+  labels:
+    app: gitea
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.2
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 1Gi
+  postgresql:
+    parameters:
+      shared_buffers: "128MB"
+      max_wal_size: "512MB"
+      wal_compression: "on"
+    pg_hba:
+      - host all all 0.0.0.0/0 md5
+  storage:
+    size: 20Gi
+    storageClass: local-path
+  walStorage:
+    size: 50Gi
+    storageClass: local-path
+  enableSuperuserAccess: true
+  monitoring:
+    enablePodMonitor: false

@@ -1,0 +1,43 @@
+# Base CNPG Cluster manifest — NO bootstrap stanza. See gitea/base/cluster.yaml
+# for serverName bump rationale.
+#
+# Plugin-mode backup config (replaces deprecated spec.backup.barmanObjectStore;
+# removed in CNPG 1.30.0). The S3 destination + retention live on a sibling
+# ObjectStore CR (base/objectstore.yaml). Migration plan:
+# docs/plans/cnpg-plugin-migration.md.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: paperless-database
+  labels:
+    app: paperless-ngx
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.2
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 500m
+    limits:
+      memory: 2Gi
+  postgresql:
+    parameters:
+      shared_buffers: "256MB"
+      max_wal_size: "1GB"
+      wal_compression: "on"
+      logging_collector: "on"
+      log_statement: "ddl"
+    pg_hba:
+      - host all all 0.0.0.0/0 md5
+  storage:
+    size: 50Gi
+    storageClass: local-path
+  walStorage:
+    size: 50Gi
+    storageClass: local-path
+  # NOTE: the Talos source exposed paperless Postgres on a Cilium LoadBalancer
+  # (192.168.10.42). Dropped for OpenShift — the in-cluster app reaches
+  # paperless-database-rw.cloudnative-pg.svc directly; no external LB needed.
+  enableSuperuserAccess: true
+  monitoring:
+    enablePodMonitor: false

@@ -1,0 +1,8 @@
+# Upstream MetalLB values. We only need Layer-2 (ARP) advertisement of the
+# gateway pool, so disable the BGP/FRR backend entirely — fewer pods, smaller
+# privileged surface, no FRR daemonset.
+frrk8s:
+  enabled: false
+speaker:
+  frr:
+    enabled: false

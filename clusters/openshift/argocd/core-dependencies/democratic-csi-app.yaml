@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: democratic-csi
+  namespace: argocd
+  annotations:
+    # Wave 1 (alongside cert-manager): the storage driver and the
+    # vanillax-local-rwo StorageClass must exist before the apps AppSet
+    # (wave 6) creates PVCs. external-secrets / 1Password Connect come up at
+    # wave 0, so the driver-config ExternalSecrets resolve before this syncs.
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/manifest-generate-paths: ".;/clusters/openshift/infra/democratic-csi"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: openshift-infrastructure
+  source:
+    repoURL: https://github.com/mitchross/talos-argocd-proxmox-multicluster-test.git
+    targetRevision: main
+    path: clusters/openshift/infra/democratic-csi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: democratic-csi
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+      - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m

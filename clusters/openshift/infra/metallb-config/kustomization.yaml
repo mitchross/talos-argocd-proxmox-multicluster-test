@@ -1,7 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+# No `kind: MetalLB` CR here — that is an OLM-operator concept. The upstream
+# Helm chart (see ../metallb-operator) deploys the controller + speaker
+# directly; only the IPAddressPool + L2Advertisement config CRs are needed.
 resources:
-  - metallb.yaml
   - ip-address-pool.yaml
   - l2-advertisement.yaml
-

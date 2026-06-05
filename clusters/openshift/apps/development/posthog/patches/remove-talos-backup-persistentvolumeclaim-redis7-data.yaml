@@ -8,3 +8,5 @@ metadata:
   annotations:
     argocd.argoproj.io/compare-options:
     storage.vanillax.dev/backup-exempt-reason:
+spec:
+  storageClassName: local-path

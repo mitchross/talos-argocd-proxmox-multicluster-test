@@ -43,9 +43,18 @@ patches:
         template:
           spec:
             containers:
+              # HOME must point at the mounted config dir (/home/opuser/.op/*);
+              # an OpenShift-assigned UID has no passwd entry so $HOME defaults
+              # to "/", and the binary then tries to mkdir /.op and fails.
               - name: connect-api
                 securityContext:
                   readOnlyRootFilesystem: false
+                env:
+                  - name: HOME
+                    value: /home/opuser
               - name: connect-sync
                 securityContext:
                   readOnlyRootFilesystem: false
+                env:
+                  - name: HOME
+                    value: /home/opuser

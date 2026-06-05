@@ -1,0 +1,22 @@
+# Let the 1Password Connect charts run AS DESIGNED (uid 999 / 65532, non-root,
+# seccompProfile RuntimeDefault). The built-in nonroot-v2 SCC permits any
+# non-root runAsUser + RunAsAny fsGroup + RuntimeDefault seccomp, so the chart's
+# own securityContext is admitted without stripping UIDs (which would break the
+# app's $HOME/.op config dir). This is the preferred pattern for Talos-origin
+# charts that hardcode a non-root UID.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: 1password-nonroot-v2
+  namespace: 1passwordconnect
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:nonroot-v2
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: 1passwordconnect
+  - kind: ServiceAccount
+    name: onepassword-connect-operator
+    namespace: 1passwordconnect

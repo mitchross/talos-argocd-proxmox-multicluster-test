@@ -20,5 +20,9 @@ helmCharts:
     valuesFile: values-nfs.yaml
 resources:
   - namespace.yaml
+  # Non-secret config templates (plain ConfigMaps, stable names — NOT
+  # configMapGenerator, which would hash-suffix and break the ESO templateFrom ref).
+  - configmap-iscsi.yaml
+  - configmap-nfs.yaml
   - externalsecret-iscsi.yaml
   - externalsecret-nfs.yaml

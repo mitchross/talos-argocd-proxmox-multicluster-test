@@ -28,3 +28,24 @@ patches:
         path: /spec/template/spec/securityContext/runAsGroup
       - op: remove
         path: /spec/template/spec/securityContext/fsGroup
+  # With the fixed UID gone, connect runs as an OpenShift-assigned UID whose
+  # $HOME is "/"; it tries to mkdir /.op and fails on the read-only rootfs.
+  # Allow a writable rootfs (connect data is ephemeral, rebuilt from the API).
+  - target:
+      kind: Deployment
+      name: onepassword-connect
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: onepassword-connect
+      spec:
+        template:
+          spec:
+            containers:
+              - name: connect-api
+                securityContext:
+                  readOnlyRootFilesystem: false
+              - name: connect-sync
+                securityContext:
+                  readOnlyRootFilesystem: false

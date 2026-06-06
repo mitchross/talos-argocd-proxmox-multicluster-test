@@ -16,6 +16,13 @@ controller:
   rbac:
     openshift:
       privileged: true
+  driver:
+    # TrueNAS 25.04+/26 removed the REST API v2.0 (returns 404); the maintainer
+    # added JSON-RPC WebSocket support in the `next` image tag only (not yet in
+    # a tagged release). freenas-api-* on `latest` probes the dead REST path.
+    # See democratic-csi#509/#532. Pin to `next` until a release ships.
+    image:
+      tag: next
 node:
   rbac:
     openshift:
@@ -23,6 +30,8 @@ node:
   driver:
     # RHCOS has no /etc/localtime to bind-mount; null disables the mount.
     localtimeHostPath: null
+    image:
+      tag: next
 
 driver:
   # Connection + ZFS/iSCSI target config lives in a 1Password-backed Secret

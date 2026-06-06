@@ -36,10 +36,10 @@ spec:
       - host all all 0.0.0.0/0 md5
   storage:
     size: 20Gi
-    storageClass: local-path
+    storageClass: vanillax-local-rwo
   walStorage:
     size: 50Gi
-    storageClass: local-path
+    storageClass: vanillax-local-rwo
   enableSuperuserAccess: true
   monitoring:
     enablePodMonitor: false

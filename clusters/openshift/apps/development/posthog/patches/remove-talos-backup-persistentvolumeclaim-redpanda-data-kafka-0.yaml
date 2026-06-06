@@ -9,4 +9,4 @@ metadata:
     argocd.argoproj.io/compare-options:
     storage.vanillax.dev/backup-exempt-reason:
 spec:
-  storageClassName: local-path
+  storageClassName: vanillax-local-rwo

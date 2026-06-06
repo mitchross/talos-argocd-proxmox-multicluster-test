@@ -11,5 +11,5 @@ metadata:
   annotations:
     argocd.argoproj.io/compare-options:
 spec:
-  storageClassName: local-path
+  storageClassName: vanillax-local-rwo
   dataSourceRef:

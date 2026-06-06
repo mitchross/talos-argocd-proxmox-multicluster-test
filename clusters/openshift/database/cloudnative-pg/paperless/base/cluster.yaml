@@ -31,10 +31,10 @@ spec:
       - host all all 0.0.0.0/0 md5
   storage:
     size: 50Gi
-    storageClass: local-path
+    storageClass: vanillax-local-rwo
   walStorage:
     size: 50Gi
-    storageClass: local-path
+    storageClass: vanillax-local-rwo
   # NOTE: the Talos source exposed paperless Postgres on a Cilium LoadBalancer
   # (192.168.10.42). Dropped for OpenShift — the in-cluster app reaches
   # paperless-database-rw.cloudnative-pg.svc directly; no external LB needed.

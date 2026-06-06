@@ -1,8 +1,9 @@
-# Grant the hostPath-mounting pods in this namespace the hostmount-anyuid SCC.
-# local-path's helper pods carry NO serviceAccountName, so they run as the
-# namespace `default` SA — that is the subject that must hold the SCC.
-# Binds the built-in OpenShift ClusterRole (auto-created per SCC), so we do not
-# redefine the cluster-owned SCC/ClusterRole here.
+# local-path provisions volumes by spawning a busybox "helper" pod that mounts
+# the host path. That pod needs an SCC allowing hostPath (restricted-v2 and the
+# cluster-wide nonroot-v2 both forbid hostPath). The helper's SA varies by
+# version (default vs the provisioner SA), so grant hostmount-anyuid to ALL
+# service accounts in this single-purpose namespace via the
+# system:serviceaccounts:local-path-storage group. Scoped to one namespace.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -12,6 +13,6 @@ roleRef:
   kind: ClusterRole
   name: system:openshift:scc:hostmount-anyuid
 subjects:
-  - kind: ServiceAccount
-    name: default
-    namespace: local-path-storage
+  - kind: Group
+    name: system:serviceaccounts:local-path-storage
+    apiGroup: rbac.authorization.k8s.io

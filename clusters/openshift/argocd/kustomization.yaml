@@ -7,7 +7,7 @@ resources:
   - bootstrap/1passwordconnect.yaml
   - bootstrap/external-secrets.yaml
   - core-dependencies/cert-manager-app.yaml
-  - core-dependencies/democratic-csi-app.yaml
+  - core-dependencies/truenas-csi-app.yaml
   - core-dependencies/local-path-provisioner-app.yaml
   - core-dependencies/metallb-operator-app.yaml
   - core-dependencies/metallb-config-app.yaml

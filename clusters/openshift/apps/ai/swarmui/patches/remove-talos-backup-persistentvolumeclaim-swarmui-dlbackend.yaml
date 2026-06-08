@@ -7,3 +7,6 @@ metadata:
     backup-exempt:
   annotations:
     storage.vanillax.dev/backup-exempt-reason:
+# Regenerable downloaded backends — node-local local-path, no TrueNAS dependency.
+spec:
+  storageClassName: local-path

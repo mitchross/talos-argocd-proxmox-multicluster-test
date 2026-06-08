@@ -7,5 +7,6 @@ metadata:
     backup-exempt:
   annotations:
     storage.vanillax.dev/backup-exempt-reason:
+# Regenerable ML model cache — node-local local-path, no TrueNAS dependency.
 spec:
-  storageClassName: vanillax-local-rwo
+  storageClassName: local-path

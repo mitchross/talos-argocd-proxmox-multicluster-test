@@ -140,7 +140,7 @@ spec:
 
 ---
 # NOTE: the truenas-api-credentials Secret is created by externalsecret.yaml
-# (apiKey pulled from 1Password item democratic-csi-truenas), not hardcoded here.
+# (apiKey pulled from 1Password item truenas-csi), not hardcoded here.
 ---
 # ConfigMap for driver configuration
 apiVersion: v1

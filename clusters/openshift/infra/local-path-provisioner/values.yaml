@@ -1,11 +1,11 @@
 # local-path-provisioner — node-local hostPath tier for OpenShift SNO.
-# Complements democratic-csi (TrueNAS): use `local-path` for persistent data
+# Complements truenas-csi (TrueNAS): use `local-path` for persistent data
 # that should stay node-local and NOT depend on TrueNAS. RWO only, no
 # snapshots/resize, data lives on the node under /opt/local-path-provisioner.
 
 storageClass:
   create: true
-  # vanillax-local-rwo (democratic-csi iSCSI) is the cluster default, not this.
+  # vanillax-local-rwo (truenas-csi iSCSI) is the cluster default, not this.
   defaultClass: false
   name: local-path
   reclaimPolicy: Delete

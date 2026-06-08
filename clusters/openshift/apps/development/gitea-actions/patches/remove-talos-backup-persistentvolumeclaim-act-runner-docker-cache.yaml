@@ -7,3 +7,6 @@ metadata:
     backup-exempt:
   annotations:
     storage.vanillax.dev/backup-exempt-reason:
+# Regenerable CI docker layer cache — node-local local-path, no TrueNAS dependency.
+spec:
+  storageClassName: local-path

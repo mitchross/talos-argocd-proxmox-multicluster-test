@@ -3,3 +3,6 @@ kind: Kustomization
 resources:
   - "../../../../manifests/infra/cert-manager/base"
   - scc-rolebinding.yaml
+patches:
+  # OpenShift uses the homelab-lab cloudflare token (covers vanillax.xyz).
+  - path: patches/externalsecret-cloudflare-lab.yaml

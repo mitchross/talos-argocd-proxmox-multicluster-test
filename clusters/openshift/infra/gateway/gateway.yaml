@@ -3,6 +3,9 @@ kind: Gateway
 metadata:
   name: openshift-gateway
   namespace: openshift-ingress
+  labels:
+    # external-dns watches gateways with this label (--gateway-label-filter)
+    external-dns-gateway: gateway-external
   annotations:
     argocd.argoproj.io/sync-wave: "0"
     cert-manager.io/cluster-issuer: cloudflare-cluster-issuer

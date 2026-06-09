@@ -1,0 +1,9 @@
+{
+  "applicationName": "openshift-infra-external-dns",
+  "cluster": "openshift",
+  "project": "openshift-infrastructure",
+  "namespace": "external-dns",
+  "part": "infra",
+  "syncWave": "4",
+  "sourcePath": "clusters/openshift/infra/external-dns"
+}

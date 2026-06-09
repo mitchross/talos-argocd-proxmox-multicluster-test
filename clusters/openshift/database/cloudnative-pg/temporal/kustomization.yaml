@@ -9,3 +9,4 @@ commonAnnotations:
 resources:
   - overlays/initdb
   - externalsecret.yaml
+  - scheduled-backup.yaml

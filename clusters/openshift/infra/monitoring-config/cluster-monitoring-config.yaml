@@ -1,0 +1,47 @@
+# Enables OpenShift's built-in user-workload monitoring (a second, dedicated
+# Prometheus + Thanos Ruler in openshift-user-workload-monitoring managed by
+# the cluster monitoring operator). This is the OpenShift-native replacement
+# for the Talos kube-prometheus-stack: NO Prometheus Operator install, NO
+# monitoring.coreos.com CRD ownership questions — the platform already ships
+# and owns those CRDs. ServiceMonitor/PodMonitor resources in user namespaces
+# (e.g. CNPG's enablePodMonitor) are scraped automatically once this is on.
+#
+# This ConfigMap name/namespace pair is the documented enablement switch:
+# https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/monitoring/configuring-user-workload-monitoring
+#
+# NOTE: must not fight a live, hand-edited cluster-monitoring-config. The SNO
+# cluster has none (verified read-only June 4-5, 2026), so Argo owning it from
+# first sync is safe. Resource budget on the single node: the UWM Prometheus
+# is capped below so it cannot crowd out GPU workloads.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    enableUserWorkload: true
+---
+# Keep the user-workload Prometheus small: SNO is a single box that also
+# serves LLM inference. 7d/2Gi retention and explicit limits.
+#
+# Ordering: the openshift-user-workload-monitoring namespace is created by the
+# cluster monitoring operator only AFTER it observes enableUserWorkload: true
+# above. The first sync of this resource may fail until then; the AppSet's
+# retry (limit 10, backoff to 10m) + selfHeal lands it on a later attempt.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-workload-monitoring-config
+  namespace: openshift-user-workload-monitoring
+data:
+  config.yaml: |
+    prometheus:
+      retention: 7d
+      retentionSize: 2GiB
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          memory: 1Gi

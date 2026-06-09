@@ -1,0 +1,34 @@
+# CNPG Barman ObjectStore — S3 backup destination + retention for the
+# paperless-database Cluster on the SNO cluster. Referenced by the Cluster CR
+# via spec.plugins[0].parameters.barmanObjectName.
+#
+# IMPORTANT — destinationPath uses the cnpg-sno/ prefix, NOT cnpg/. The Talos
+# cluster writes to s3://postgres-backups/cnpg/paperless on the same RustFS; the
+# two clusters must never share a prefix or their WAL lineages collide.
+#
+# Retention is owned here (plugin shape), not on the Cluster CR.
+# Sync-wave -6: admitted BEFORE the Cluster (root kustomization waves
+# everything to -5).
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: paperless-objectstore
+  namespace: cloudnative-pg
+  annotations:
+    argocd.argoproj.io/sync-wave: "-6"
+spec:
+  configuration:
+    destinationPath: s3://postgres-backups/cnpg-sno/paperless
+    endpointURL: http://192.168.10.133:30292
+    s3Credentials:
+      accessKeyId:
+        name: cnpg-s3-credentials
+        key: AWS_ACCESS_KEY_ID
+      secretAccessKey:
+        name: cnpg-s3-credentials
+        key: AWS_SECRET_ACCESS_KEY
+    wal:
+      compression: gzip
+    data:
+      compression: gzip
+  retentionPolicy: "14d"

@@ -42,4 +42,15 @@ spec:
     storageClass: vanillax-local-rwo
   enableSuperuserAccess: true
   monitoring:
-    enablePodMonitor: false
+    enablePodMonitor: true # scraped by OpenShift user-workload monitoring (infra/monitoring-config)
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      # Active WAL writer for the sibling ObjectStore (base/objectstore.yaml).
+      # Keep at most one Cluster per ObjectStore as isWALArchiver=true.
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: gitea-objectstore
+        # SNO lineage v1 under the cnpg-sno/ prefix — distinct from every
+        # Talos lineage. Bump in lockstep with any recovery, same rules as
+        # the Talos serverName comments.
+        serverName: gitea-database-sno-v1

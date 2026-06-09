@@ -1,0 +1,36 @@
+# CloudNativePG Barman Cloud Plugin — OpenShift port of the Talos
+# cnpg-barman-plugin app (see that kustomization for the full history,
+# including the 2026-05-07 same-namespace plugin-discovery gotcha).
+#
+# Key facts:
+# - Provides the ObjectStore CRD + the barman-cloud sidecar plugin the per-DB
+#   Clusters reference via spec.plugins[0] (barman-cloud.cloudnative-pg.io).
+# - MUST be co-located with the CNPG operator's namespace (cloudnative-pg);
+#   operator plugin discovery only sees Services in its own namespace.
+# - Upstream manifest is pulled from the pinned release tag (no Helm chart
+#   exists upstream). Bump the URL tag to upgrade — keep in lockstep with the
+#   Talos copy so both clusters run the same plugin version.
+# - Upstream uses cert-manager Issuer/Certificate for the gRPC TLS pair;
+#   cert-manager is an OpenShift core dependency (wave ordering holds).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Co-locate with the CNPG operator. Discovery requires same-namespace.
+namespace: cloudnative-pg
+
+commonAnnotations:
+  # Internal wave for resources inside this Application. Cross-Application
+  # ordering is handled by .argocd/config.json (syncWave 3, before the per-DB
+  # apps at syncWave 4 inside the wave-5 openshift-database AppSet).
+  argocd.argoproj.io/sync-wave: "-9"
+
+resources:
+  - https://github.com/cloudnative-pg/plugin-barman-cloud/releases/download/v0.12.0/manifest.yaml
+
+patches:
+  # The upstream manifest creates a Namespace resource named `cnpg-system`.
+  # Strip it — the plugin is co-located in cloudnative-pg (see header).
+  - path: patches/delete-cnpg-system-namespace.yaml
+    target:
+      kind: Namespace
+      name: cnpg-system

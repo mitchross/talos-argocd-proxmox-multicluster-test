@@ -48,9 +48,35 @@ they conflict, this section wins:
   upstream NVIDIA Helm chart (`helm.ngc.nvidia.com/nvidia`, NFD subchart
   included), which matches this repo's no-OLM workaround pattern. llmfit's
   dual-GPU job assumes 2 GPUs and will stay Pending on a single-GPU SNO.
-- **OpenShift CNPG still has no automated backups** (unchanged, but restated
-  because `reclaimPolicy: Retain` on truenas-csi is currently the only safety
-  net for ALL app data on the cluster).
+- **OpenShift CNPG backups are now declared in Git** (this branch): the
+  Barman Cloud plugin (`v0.12.0`, co-located in `cloudnative-pg`, discovered
+  by the database AppSet at syncWave 3), a shared `cnpg-s3-credentials`
+  ExternalSecret (`postgres-global-secrets`, reads the SAME 1Password
+  `rustfs` item Talos uses — no new pre-seed), and per-DB
+  ObjectStore + ScheduledBackup + `spec.plugins` for all 4 Clusters.
+  - **Lineage isolation from Talos is structural:** destinationPath uses
+    `s3://postgres-backups/cnpg-sno/<db>` (Talos uses `cnpg/<db>`) AND
+    serverName is `<db>-database-sno-v1`. Never share a prefix or serverName
+    across clusters.
+  - Schedules run on the half-hour (immich 02:30, temporal 03:30, gitea
+    04:30, paperless 05:30) so the two clusters never hit RustFS together.
+  - Live verification still pending: first `Backup` CR must reach
+    `completed` and `barman-cloud` WAL archiving must go green on each
+    Cluster after bootstrap.
+- **cloudflared ingress is now an explicit hostname allowlist** (this
+  branch) — the previous `*.vanillax.xyz` wildcard would have exposed
+  internal apps (Home Assistant, Frigate, Paperless, ArgoCD) publicly the
+  moment any wildcard DNS record appeared. Adding an external app now means:
+  label the HTTPRoute `external-dns: "true"` AND add the hostname to
+  `clusters/openshift/infra/cloudflared/config.yaml`.
+- **LAN DNS for vanillax.xyz**: `firewalla-dns-config-xyz.txt` (repo root)
+  lists every internal hostname → `192.168.10.230`; internal apps resolve
+  ONLY via Firewalla, never Cloudflare.
+- **User-workload monitoring is enabled in Git**
+  (`clusters/openshift/infra/monitoring-config/`): OpenShift-native UWM
+  Prometheus (capped 7d/2GiB/1Gi RAM), CNPG `enablePodMonitor: true` on all
+  4 Clusters. No Prometheus Operator is installed — the platform owns the
+  monitoring.coreos.com CRDs on OpenShift.
 
 ## Current Direction
 

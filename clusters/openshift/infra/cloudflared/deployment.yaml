@@ -30,14 +30,16 @@ spec:
         - name: cloudflared
           image: cloudflare/cloudflared:2026.5.2 # renovate: docker=cloudflare/cloudflared
           imagePullPolicy: IfNotPresent
-          # Dashboard-managed (NUC-LAB) tunnel → run with the connector token.
-          # Routes/ingress are configured in the Cloudflare dashboard, not here.
+          # NUC-LAB is locally-managed: --token supplies credentials + tunnel ID,
+          # the mounted config.yaml supplies the ingress routes (GitOps).
           args:
             - tunnel
+            - --config
+            - /etc/cloudflared/config/config.yaml
             - --no-autoupdate
-            - --metrics
-            - 0.0.0.0:2000
             - run
+            - --token
+            - $(TUNNEL_TOKEN)
           env:
             - name: TUNNEL_TOKEN
               valueFrom:
@@ -73,4 +75,12 @@ spec:
               type: RuntimeDefault
             capabilities:
               drop: ["ALL"]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/cloudflared/config/config.yaml
+              subPath: config.yaml
       restartPolicy: Always
+      volumes:
+        - name: config
+          configMap:
+            name: config

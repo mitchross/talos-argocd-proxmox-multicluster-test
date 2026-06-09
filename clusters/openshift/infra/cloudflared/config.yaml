@@ -1,0 +1,21 @@
+# Ingress routes only. Credentials + tunnel ID come from --token (TUNNEL_TOKEN),
+# so no `tunnel:` / `credentials-file:` here. This tunnel (NUC-LAB) is locally
+# managed, so these local ingress rules are the source of truth for routing.
+metrics: 0.0.0.0:2000
+no-autoupdate: true
+ingress:
+  # All OpenShift apps are fronted by the openshift-gateway (Gateway API),
+  # reachable at the MetalLB-assigned address 192.168.10.230:443. cloudflared
+  # forwards to the gateway's HTTPS listener; HTTPRoutes do per-host routing.
+  # noTLSVerify because Cloudflare terminates public TLS at the edge.
+  - hostname: "*.vanillax.xyz"
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: "*.vanillax.xyz"
+  - hostname: vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: vanillax.xyz
+  - service: http_status:404

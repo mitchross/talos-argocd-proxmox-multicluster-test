@@ -1,0 +1,8 @@
+# LVM Storage (LVMS) — STAGED, not deployed. See README.md: the AppSet marker
+# is .argocd/config.json.disabled; rename it AFTER the 4.21 GA reinstall, the
+# catalog check, and filling in the second SSD's /dev/disk/by-id path in
+# lvm-storage.yaml.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - lvm-storage.yaml

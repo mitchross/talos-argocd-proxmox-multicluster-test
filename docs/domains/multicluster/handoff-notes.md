@@ -5,6 +5,40 @@
 > structural migration is locally accepted, but the live OpenShift target is
 > **not ready for bootstrap** as of June 4, 2026.
 
+## June 9, 2026 (latest) — reformat to 4.21 GA planned; LVMS staged for the second SSD
+
+Operator decisions (this date):
+
+- **The SNO will be REINSTALLED at 4.21 GA via the Assisted Installer** (same
+  wizard as the original install). There is no downgrade path from
+  4.22.0-rc.5, the cluster carries no workloads yet, and Git is the source of
+  truth — reinstall + `scripts/bootstrap-cluster.sh openshift` is the cheap
+  and correct move. Stop treating rc.5 catalog gaps as a live constraint;
+  treat 4.21 GA as the target platform and fix workarounds accordingly.
+- **The box has a SECOND SSD → LVM Storage (LVMS).** A complete staged entry
+  exists at `clusters/openshift/infra/lvm-storage/` (Namespace +
+  OperatorGroup + Subscription + LVMCluster, marker
+  `.argocd/config.json.disabled`). Its README has the full enable checklist:
+  catalog check, find the disk's `/dev/disk/by-id` path, `wipefs`, fill in
+  the placeholder, flip the marker. Resulting class: `lvms-vg1` (NOT
+  default; CSI snapshots/clones — the future VolSync/pvc-plumber path on
+  this cluster). TrueNAS iSCSI stays the `vanillax-local-rwo` default for
+  app data that must survive reinstalls. `local-path-provisioner` becomes a
+  retirement candidate once LVMS is live. ODF/Ceph was considered and
+  rejected (3-node Ceph platform, wrong for SNO); Longhorn-on-OpenShift was
+  considered and rejected (possible, but LVMS is the native equivalent
+  without iscsid MachineConfigs/SCC grants).
+- **Minimal-OLM stance, stated explicitly:** no console-clicked OperatorHub
+  installs, no OpenShift GitOps operator — ever. OLM Subscriptions ARE
+  acceptable when declared in Git and synced by our own Argo CD, but only
+  for products that ship exclusively through OLM (LVMS, NVIDIA
+  certified GPU operator + NFD). Everything with a viable Helm path stays
+  Helm (MetalLB, cert-manager, external-dns, truenas-csi, cloudflared, ...)
+  — on GA this is now a *preference*, no longer a catalog workaround.
+- **After the reinstall**, the GPU stack catalog check
+  (`clusters/openshift/infra/gpu-operator/README.md`) is expected to pass on
+  the GA catalog; flip that marker too.
+
 ## June 9, 2026 (later) — 1:1 parity is deliberate; do NOT trim overlays
 
 Operator decision (explicit, this date): **keep full 1:1 app parity between

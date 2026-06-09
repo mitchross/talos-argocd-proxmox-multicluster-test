@@ -121,14 +121,19 @@ docs/                   # Documentation
 - Use portable `storageClassName: vanillax-local-rwo` in shared app sources;
   Talos maps it to Longhorn and OpenShift maps it to TrueNAS iSCSI via the
   official truenas-csi driver (`csi.truenas.io`, vendored v1.0.4 — replaced
-  democratic-csi because TrueNAS 26 removed the REST API it needs; NOT the
-  LVMS operator, which the `4.22.0-rc.5` `redhat-operators` catalog does not
-  publish). See `clusters/openshift/infra/truenas-csi/`. OpenShift also gets a dynamic
+  democratic-csi because TrueNAS 26 removed the REST API it needs). See
+  `clusters/openshift/infra/truenas-csi/`. OpenShift also gets a dynamic
   `truenas-nfs-csi` RWX class; the static `csi-driver-nfs`/`smb` shares remain
-  for media apps with pre-existing data. A node-local `local-path` class
+  for media apps with pre-existing data. **LVMS is STAGED** at
+  `clusters/openshift/infra/lvm-storage/` (disabled marker) for the planned
+  4.21 GA reinstall — the rc.5 catalog didn't publish it. It claims the
+  node's second SSD as a fast node-local `lvms-vg1` class (NOT default, CSI
+  snapshots — the future VolSync path on OpenShift); shared bases must never
+  name `lvms-vg1` directly (CI enforces). A node-local `local-path` class
   (`clusters/openshift/infra/local-path-provisioner/`, hostPath, NOT default,
-  no TrueNAS dependency) is available for persistent data that should stay on
-  the node; use `emptyDir`/`emptyDir{medium: Memory}` for ephemeral/scratch.
+  no TrueNAS dependency) covers node-local persistence until LVMS is live,
+  then becomes a retirement candidate; use `emptyDir`/`emptyDir{medium:
+  Memory}` for ephemeral/scratch.
 - Use NFS CSI driver (`csi: driver: nfs.csi.k8s.io`) for static NFS PVs — **legacy `nfs:` silently ignores mountOptions**
 - Add explicit infrastructure metadata/entrypoints under the owning
   `clusters/<cluster>/infra` tree and update that cluster's Argo entrypoint

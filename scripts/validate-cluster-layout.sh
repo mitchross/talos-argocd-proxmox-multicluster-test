@@ -83,13 +83,22 @@ if [ -f "$cloudflared_config" ]; then
              || rg -q "^\s*-\s+(\./)?${subpath}\s*$" "$rel/../kustomization.yaml" 2>/dev/null; then
             # Per-YAML-document: a file can hold an internal AND an external
             # route (posthog); only hostnames from labeled documents count.
-            awk 'BEGIN{RS="\n---"} /external-dns: .true./ {
-                   n = split($0, lines, "\n")
-                   for (i = 1; i <= n; i++)
-                     if (match(lines[i], /^[[:space:]]+- [a-z0-9.-]+\.vanillax\.xyz[[:space:]]*$/)) {
-                       gsub(/^[[:space:]]+- |[[:space:]]+$/, "", lines[i]); print lines[i]
-                     }
-                 }' "$route" || true
+            # Line-based state machine — portable across gawk/mawk (multi-char
+            # RS is not POSIX).
+            awk '
+              function flush() {
+                if (labeled) for (i = 1; i <= n; i++) print hosts[i]
+                labeled = 0; n = 0
+              }
+              /^---[[:space:]]*$/ { flush(); next }
+              /external-dns: .true./ { labeled = 1 }
+              /^[[:space:]]+- [a-z0-9.-]+\.vanillax\.xyz[[:space:]]*$/ {
+                line = $0
+                gsub(/^[[:space:]]+- |[[:space:]]+$/, "", line)
+                hosts[++n] = line
+              }
+              END { flush() }
+            ' "$route" || true
           fi
         done | sort -u
   )"

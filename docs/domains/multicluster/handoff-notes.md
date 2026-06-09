@@ -60,6 +60,9 @@ they conflict, this section wins:
     across clusters.
   - Schedules run on the half-hour (immich 02:30, temporal 03:30, gitea
     04:30, paperless 05:30) so the two clusters never hit RustFS together.
+  - Each DB also has an inactive `overlays/recovery` mirroring the Talos DR
+    flow: bump base serverName to sno-vN+1, point the recovery overlay at
+    sno-vN, flip the root kustomization line, delete Cluster + PVCs.
   - Live verification still pending: first `Backup` CR must reach
     `completed` and `barman-cloud` WAL archiving must go green on each
     Cluster after bootstrap.

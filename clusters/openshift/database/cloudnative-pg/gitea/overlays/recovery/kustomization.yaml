@@ -1,0 +1,25 @@
+# recovery overlay — restore from Barman S3 (RustFS, cnpg-sno/ prefix).
+# NOT ACTIVE by default; the root kustomization points at overlays/initdb.
+#
+# DR procedure (mirrors the Talos clusters — see the Talos
+# gitea/overlays/recovery for the battle-tested rationale):
+#   1. Bump base/cluster.yaml .spec.plugins[0].parameters.serverName to the
+#      NEXT lineage (sno-vN+1) so post-restore writes never append to the
+#      lineage you are restoring from.
+#   2. Point bootstrap-patch.yaml externalClusters[0].plugin.parameters
+#      .serverName at the PRIOR known-good lineage (sno-vN).
+#   3. Flip the root kustomization resource from overlays/initdb to
+#      overlays/recovery.
+#   4. kubectl delete cluster gitea-database -n cloudnative-pg && delete its
+#      PVCs (CNPG only evaluates spec.bootstrap at Cluster creation).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+patches:
+  - path: bootstrap-patch.yaml
+    target:
+      group: postgresql.cnpg.io
+      version: v1
+      kind: Cluster
+      name: gitea-database

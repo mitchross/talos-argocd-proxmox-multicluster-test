@@ -3,13 +3,12 @@
 # managed, so these local ingress rules are the source of truth for routing.
 #
 # EXPLICIT hostname allowlist — deliberately NOT a "*.vanillax.xyz" wildcard.
-# Internal-only apps (ArgoCD, the AI stack, gitea, ...) share the same
-# openshift-gateway, so a wildcard rule would expose them publicly the moment
-# any DNS record resolved (e.g. an accidental Cloudflare wildcard). This list
-# mirrors Talos's internal/external gateway split: only HTTPRoutes labeled
-# `external-dns: "true"` belong here. Adding an external app = label the route
-# AND add its hostname below. CI (validate-cluster-layout.sh) enforces that
-# this list exactly mirrors the labeled routes.
+# Internal-only apps (Home Assistant, Frigate, Paperless, ArgoCD, ...) share
+# the same openshift-gateway, so a wildcard rule would expose them publicly
+# the moment any DNS record resolved (e.g. an accidental Cloudflare wildcard).
+# This list mirrors Talos's internal/external gateway split: only HTTPRoutes
+# labeled `external-dns: "true"` belong here. Adding an external app =
+# label the route AND add its hostname below.
 #
 # Each rule forwards to the openshift-gateway HTTPS listener at the MetalLB
 # address 192.168.10.230:443. originServerName pins SNI to the app hostname so
@@ -18,16 +17,100 @@
 metrics: 0.0.0.0:2000
 no-autoupdate: true
 ingress:
+  - hostname: convertx.vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: convertx.vanillax.xyz
+  - hostname: cyberchef.vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: cyberchef.vanillax.xyz
+  # dvwa.vanillax.xyz — app disabled in the shared base; re-add together
+  # with the dvwa httproute kustomization entry.
   - hostname: excalidraw.vanillax.xyz
     service: https://192.168.10.230:443
     originRequest:
       noTLSVerify: true
       originServerName: excalidraw.vanillax.xyz
+  - hostname: fizzy.vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: fizzy.vanillax.xyz
+  - hostname: flatnotes.vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: flatnotes.vanillax.xyz
+  - hostname: home-project-nomad-kiwix.vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: home-project-nomad-kiwix.vanillax.xyz
+  - hostname: ingest-posthog.vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: ingest-posthog.vanillax.xyz
+  - hostname: it-tools.vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: it-tools.vanillax.xyz
+  - hostname: karakeep.vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: karakeep.vanillax.xyz
+  # kolibri.vanillax.xyz — route disabled (broken upstream image); re-add
+  # together with the project-nomad kolibri httproute.
+  - hostname: libreddit.vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: libreddit.vanillax.xyz
+  - hostname: mailpit.vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: mailpit.vanillax.xyz
+  - hostname: media-kiwix.vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: media-kiwix.vanillax.xyz
+  - hostname: news.vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: news.vanillax.xyz
+  - hostname: nomad.vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: nomad.vanillax.xyz
+  - hostname: radar-ng-api.vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: radar-ng-api.vanillax.xyz
+  - hostname: redlib.vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: redlib.vanillax.xyz
   - hostname: search.vanillax.xyz
     service: https://192.168.10.230:443
     originRequest:
       noTLSVerify: true
       originServerName: search.vanillax.xyz
+  - hostname: vert.vanillax.xyz
+    service: https://192.168.10.230:443
+    originRequest:
+      noTLSVerify: true
+      originServerName: vert.vanillax.xyz
   - hostname: vanillax.xyz
     service: https://192.168.10.230:443
     originRequest:

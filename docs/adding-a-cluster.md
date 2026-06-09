@@ -1,9 +1,11 @@
 # Adding a Cluster (and Adding Apps to It)
 
-This repo's core claim: **if you only have one cluster, you fill out one
-overlay — and the same layout scales to n clusters.** This page is the
-walkthrough that makes the claim concrete. It assumes nothing beyond basic
-Kustomize and Argo CD knowledge.
+This repo's core claim: **the same shared app sources deploy to n clusters
+across Kubernetes distributions, with Kustomize overlays absorbing the
+platform differences.** Talos and OpenShift run the *entire* app catalog in
+1:1 parity — that parity is the proof that "Kubernetes is Kubernetes." This
+page is the walkthrough that makes the claim concrete. It assumes nothing
+beyond basic Kustomize and Argo CD knowledge.
 
 ## The model in one diagram
 
@@ -28,10 +30,12 @@ Rules that keep it honest:
   to itself. No hub/spoke, no remote cluster registration, no cross-cluster
   file references (CI fails an OpenShift overlay that imports
   `clusters/talos/...`).
-- **Talos is the complete reference cluster:** every shared base must have a
-  Talos overlay. **Every other cluster opts in per-app** — a lab cluster
-  deploys a curated subset, and a missing overlay simply means "this cluster
-  doesn't run that app."
+- **1:1 parity is the contract:** every shared app base has an overlay in
+  *every* cluster, both directions enforced by CI (a base without an overlay
+  in some cluster fails; an overlay without a base fails). Which apps
+  actually *run* on a given cluster is a runtime decision (the operator can
+  disable Argo apps by hand) — but the overlays stay in Git, because they
+  are the portability proof.
 - **Cluster-specific differences live in the overlay,** as Kustomize patches:
   storage class mapping, backup-label removal (Talos-only pvc-plumber),
   HTTPRoute domains and parentRefs, SCC/securityContext differences.
@@ -53,16 +57,16 @@ clusters/<name>/
 │   └── projects.yaml
 ├── infra/              # cluster-owned infrastructure (CNI, gateway, storage,
 │                       # external-dns, cert-manager, ...). Sync waves matter here.
-├── apps/<category>/<app>/   # one overlay dir per opted-in app
-├── database/           # CNPG operator + per-DB lineages (optional)
+├── apps/<category>/<app>/   # one overlay dir per shared app base (1:1 parity)
+├── database/           # CNPG operator + per-DB lineages
 └── monitoring/         # optional; Talos uses kube-prometheus-stack,
                         # OpenShift uses built-in user-workload monitoring
 ```
 
 ## Adding cluster number n+1
 
-1. **Copy the closest existing tree** — `clusters/openshift/` is the smaller,
-   more readable starting point; `clusters/talos/` is the full production
+1. **Copy the closest existing tree** — `clusters/openshift/` shows the
+   minimum a second cluster needs; `clusters/talos/` is the full production
    reference. Rename to `clusters/<name>/`.
 2. **Fix the identity files first:**
    - `bootstrap/root.yaml` → path `clusters/<name>/argocd`, your repo URL.
@@ -85,14 +89,18 @@ clusters/<name>/
    steps by hand the first time): apply Gateway API CRDs, install Argo CD via
    the upstream Helm chart with `bootstrap/values.yaml`, apply
    `bootstrap/root.yaml`. From there Git drives everything.
-5. **Opt in to apps** — see below. Start with `development/nginx`; it is the
-   smallest possible overlay and proves gateway + storage + discovery
-   end-to-end.
+5. **Create the app overlays.** Parity means one overlay per shared base —
+   start with `development/nginx` to prove gateway + storage + discovery
+   end-to-end, then work through the catalog. Most overlays are
+   near-identical (base reference + httproute + backup-label patches), so
+   this is mechanical; the 44/44 Talos→OpenShift migration was done exactly
+   this way.
 
-## Adding an app to a cluster (the everyday operation)
+## Adding an app (the everyday operation)
 
-The app already has a shared base under `manifests/apps/<category>/<app>/base`
-(if not, see `/project:new-app`). Opting a cluster in is one directory:
+A new app means a shared base under `manifests/apps/<category>/<app>/base`
+(see `/project:new-app`) **plus one overlay per cluster** — CI fails until
+every cluster has one:
 
 ```text
 clusters/<name>/apps/<category>/<app>/
@@ -115,10 +123,11 @@ patches:
   - path: patches/remove-talos-backup-persistentvolumeclaim-storage.yaml
 ```
 
-That's the whole opt-in. The cluster's apps ApplicationSet discovers the
-directory on the next sync — no Application YAML to write, nothing to
-register. The two patches strip Talos-only pvc-plumber backup labels; a
-cluster with its own backup story would patch differently or not at all.
+That's a whole per-cluster opt-in. The cluster's apps ApplicationSet
+discovers the directory on the next sync — no Application YAML to write,
+nothing to register. The two patches strip Talos-only pvc-plumber backup
+labels; a cluster with its own backup story would patch differently or not
+at all.
 
 Per-cluster route rules:
 
@@ -136,7 +145,7 @@ Per-cluster route rules:
 
 | Guard | Failure it prevents |
 |-------|---------------------|
-| Talos overlay required per shared base | reference cluster developing gaps |
+| Overlay required in every cluster per shared base (1:1 parity, count derived from `manifests/apps`) | a cluster silently developing catalog gaps |
 | Overlay must point at a real shared base | orphan overlays after a base rename |
 | No `clusters/talos` imports from other clusters | hidden cross-cluster coupling |
 | No Talos storage classes / gateway parentRefs in OpenShift renders | unportable bases |
@@ -145,10 +154,10 @@ Per-cluster route rules:
 
 ## Current cluster roles
 
-- **`clusters/talos` — production.** Complete app catalog, Longhorn,
-  pvc-plumber/VolSync backups, kube-prometheus-stack, dual internal/external
-  gateways on `vanillax.me`.
-- **`clusters/openshift` — AI box + learning lab.** Curated subset (AI stack,
-  nginx, gitea + CNPG, searxng, excalidraw) on `vanillax.xyz`, OVN-Kubernetes,
-  TrueNAS CSI, single gateway + cloudflared allowlist, built-in user-workload
-  monitoring. Read this tree first — it is the on-ramp.
+- **`clusters/talos` — production.** Longhorn, pvc-plumber/VolSync backups,
+  kube-prometheus-stack, dual internal/external gateways on `vanillax.me`.
+- **`clusters/openshift` — AI box + learning lab.** Same full catalog on
+  `vanillax.xyz` (parity is the point), OVN-Kubernetes, TrueNAS CSI, single
+  gateway + cloudflared allowlist, built-in user-workload monitoring. Which
+  apps stay powered on there is a runtime decision, made by hand — not a
+  Git-tree decision.

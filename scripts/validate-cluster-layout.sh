@@ -144,19 +144,18 @@ while IFS= read -r path; do
   fail "manifest-generate-paths must include consumed shared bases: $path"
 done < <(rg -l -F 'manifest-generate-paths: "{{.sourcePath}}"' clusters --glob '*.yaml' || true)
 
-# Talos is the complete production reference: every shared app base must have
-# a Talos overlay. Other clusters opt in per-app — the SNO lab deploys a
-# curated teaching subset, so a missing openshift overlay is intentional, but
-# any overlay that DOES exist must point at a real shared base (catches
-# orphans left behind when a base is renamed or retired).
 while IFS= read -r base; do
   relative_app="${base#manifests/apps/}"
   relative_app="${relative_app%/base}"
-  if [ ! -f "clusters/talos/apps/$relative_app/kustomization.yaml" ]; then
-    fail "missing talos overlay for shared app base: $base"
-  fi
+  for cluster in talos openshift; do
+    if [ ! -f "clusters/$cluster/apps/$relative_app/kustomization.yaml" ]; then
+      fail "missing $cluster overlay for shared app base: $base"
+    fi
+  done
 done < <(find manifests/apps -mindepth 3 -maxdepth 3 -type d -name base | sort)
 
+# Reverse guard: any overlay that exists must point at a real shared base
+# (catches orphans left behind when a base is renamed or retired).
 for cluster in talos openshift; do
   while IFS= read -r overlay; do
     relative_app="${overlay#clusters/$cluster/apps/}"

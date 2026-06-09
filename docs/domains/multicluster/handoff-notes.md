@@ -5,46 +5,19 @@
 > structural migration is locally accepted, but the live OpenShift target is
 > **not ready for bootstrap** as of June 4, 2026.
 
-## June 9, 2026 (later) — SNO is a curated lab, not Talos parity
+## June 9, 2026 (later) — 1:1 parity is deliberate; do NOT trim overlays
 
-Strategy decision (operator, this date): **Talos is prod; SNO is an AI box +
-multicluster learning lab.** The repo's job is to show "Kubernetes is
-Kubernetes" with Kustomize absorbing the distribution differences (OVN stays —
-switching SNO to Cilium would weaken that thesis). 1:1 app parity was a
-*migration proof*, not the steady state: running personal-data apps
-(immich/paperless/frigate) on both clusters would create ambiguous duplicate
-data and double backup churn. Where this conflicts with anything below, this
-section wins:
-
-- **SNO now deploys a curated teaching subset — one app per Kustomize pattern
-  class:** the full AI stack (`llama-cpp`, `comfyui`, `swarmui`, `open-webui`,
-  `llmfit`, `perplexica` — the box's purpose), `development/nginx` (minimal
-  stateless), `development/gitea` (CNPG-backed app), `privacy/searxng`
-  (perplexica hard-depends on its in-cluster service; also an external-route
-  example), and `utility/excalidraw` (external-route example). All other
-  `clusters/openshift/apps` overlays and the `immich`/`paperless`/`temporal`
-  CNPG lineages were deleted (dvwa is gone with them — deliberately vulnerable
-  software no longer has a public hostname).
-- **The layout validator no longer enforces 1:1 parity.** New contract in
-  `scripts/validate-cluster-layout.sh`: every `manifests/apps/*/*/base` must
-  have a **talos** overlay (Talos = complete reference); other clusters opt in
-  per-app, and any overlay that exists must point at a real shared base.
-- **CNPG on SNO is gitea-only** (operator + barman plugin +
-  postgres-global-secrets + gitea lineage, `cnpg-sno/gitea` prefix,
-  `gitea-database-sno-v1` serverName, 04:30 schedule, recovery overlay
-  intact). The immich/paperless/temporal bullets below describe deleted
-  lineages.
-- **cloudflared allowlist is now 2 hostnames + apex**
-  (`excalidraw.vanillax.xyz`, `search.vanillax.xyz`, `vanillax.xyz`);
-  `firewalla-dns-config-xyz.txt` was trimmed to the surviving hostnames. The
-  CI drift guard (labeled routes ⇄ allowlist) enforces both directions.
-- **The n-cluster onboarding path is now documented:**
-  `docs/adding-a-cluster.md` — bootstrap script → root app →
-  `clusters/<name>/argocd` → per-app overlays. That doc is the artifact for
-  the "fill out one overlay and the repo scales to n clusters" goal.
-- **Version target:** GA (4.21+) over rc.5 once convenient — Gateway API is GA
-  since 4.19, and GA catalogs un-gate the staged OLM GPU stack and would let
-  MetalLB return to the operator. All lab; no urgency.
+Operator decision (explicit, this date): **keep full 1:1 app parity between
+Talos and OpenShift in Git.** The complete overlay catalog is the proof that
+the Kustomize layout ports across distributions — that is the repo's purpose
+(work-learning: "Kubernetes is Kubernetes", lab vs prod). Duplicate running
+apps (immich, frigate, ...) are acceptable; the operator will power things
+off **by hand at runtime** as desired. A curated-subset trim was attempted
+and reverted the same day — do not re-attempt it. Agents: never delete
+`clusters/openshift/apps` overlays to "reduce scope"; CI enforces parity in
+both directions (overlay count derived from `manifests/apps`, plus an
+orphan-overlay guard). The n-cluster onboarding path is documented in
+`docs/adding-a-cluster.md`.
 
 ## June 9, 2026 Update — supersedes stale details below
 
@@ -175,9 +148,9 @@ instances are independent.
 - Talos remains the default and full-fidelity cluster.
 - `clusters/<cluster>` contains every deployable Argo CD entrypoint.
 - `manifests/**/base` contains shared sources only.
-- All 44 apps have Talos overlays; OpenShift opts in per-app (curated lab
-  subset — see the June 9 strategy section at the top; the original 44/44
-  parity was the migration proof, since trimmed).
+- All 44 apps have Talos and OpenShift overlays.
+- Existing activation state is preserved; intentionally disabled DVWA and
+  Project Nomad Kolibri resources remain disabled.
 - App overlays are directory-discovered from `clusters/<cluster>/apps/*/*`.
 - Explicit infrastructure, database, and monitoring entrypoints retain
   `.argocd/config.json` only where it carries real ordering, allowlist, or

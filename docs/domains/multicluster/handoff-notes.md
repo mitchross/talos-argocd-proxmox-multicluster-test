@@ -5,6 +5,53 @@
 > structural migration is locally accepted, but the live OpenShift target is
 > **not ready for bootstrap** as of June 4, 2026.
 
+## June 9, 2026 Update — supersedes stale details below
+
+The tree moved past several statements in the body of this document. Where
+they conflict, this section wins:
+
+- **Storage: democratic-csi was replaced by the official iXsystems
+  `truenas-csi` driver** (`csi.truenas.io`, vendored v1.0.4, commit
+  `99c3576`). TrueNAS 26 removed the REST API democratic-csi depends on; the
+  official driver uses the WebSocket API. `vanillax-local-rwo` (default,
+  iSCSI zvols under `BigTank/k8s/iscsi/v`, `reclaimPolicy: Retain`) and
+  `truenas-nfs-csi` (RWX NFS under `BigTank/k8s/nfs/v`) are both provisioned
+  by `csi.truenas.io`. See `clusters/openshift/infra/truenas-csi/`.
+  - **Secret contract changed:** the two `democratic-csi-truenas-{iscsi,nfs}`
+    1Password items described below are obsolete. The driver now reads ONE
+    item, `truenas-csi` (field `apiKey`), in `homelab-prod`, via the
+    `truenas-api-credentials` ExternalSecret.
+- **Route/domain model changed: OpenShift Gateway apps use flat
+  `*.vanillax.xyz`**, not `*.gateway.apps.sno-ai-lab.vanillax.xyz`. The
+  single `openshift-gateway` (namespace `openshift-ingress`, MetalLB
+  `192.168.10.230`) carries listeners for `*.vanillax.xyz`; cert-manager's
+  gateway-shim issues `cert-openshift-gateway-apps` from the Gateway
+  annotation; cloudflared tunnels `*.vanillax.xyz` to `.230:443`; external-dns
+  (txtOwnerId `openshift-sno`, domainFilter `vanillax.xyz`) publishes ONLY
+  routes labeled `external-dns: "true"`. Internal-only apps have no public
+  DNS record and need Firewalla local DNS entries for `vanillax.xyz` →
+  `192.168.10.230` (the existing `firewalla-dns-config.txt` covers only
+  `vanillax.me`). The default OpenShift router keeps
+  `*.apps.sno-ai-lab.vanillax.xyz` → `.10` untouched. The validators in
+  `scripts/` now enforce the flat-domain model.
+- **GPU PriorityClasses now exist on OpenShift**
+  (`clusters/openshift/infra/gpu-priority-classes/`). The shared AI bases
+  reference `gpu-workload-high`/`gpu-workload-preemptible` by name, and a
+  missing PriorityClass rejects pod creation outright.
+- **Open GPU blocker:** the cluster has NO NVIDIA stack (no Node Feature
+  Discovery, no GPU Operator, no `nvidia` RuntimeClass, no `nvidia.com/gpu`
+  capacity). llama-cpp, comfyui, swarmui, and llmfit cannot run until one is
+  installed. Decision pending: OLM `gpu-operator-certified` from the
+  `certified-operators` catalog (check
+  `kubectl get packagemanifests -n openshift-marketplace | grep -i gpu` —
+  the rc.5 catalogs were missing lvms/metallb, so verify first) vs the
+  upstream NVIDIA Helm chart (`helm.ngc.nvidia.com/nvidia`, NFD subchart
+  included), which matches this repo's no-OLM workaround pattern. llmfit's
+  dual-GPU job assumes 2 GPUs and will stay Pending on a single-GPU SNO.
+- **OpenShift CNPG still has no automated backups** (unchanged, but restated
+  because `reclaimPolicy: Retain` on truenas-csi is currently the only safety
+  net for ALL app data on the cluster).
+
 ## Current Direction
 
 The branch uses a cluster-centric Kustomize layout:

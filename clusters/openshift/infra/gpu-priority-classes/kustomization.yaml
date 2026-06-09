@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Same PriorityClasses as the Talos gpu-priority-classes infra app. The shared
+# AI app bases (llama-cpp, comfyui, swarmui, llmfit) reference these by name;
+# without them the API server rejects pod creation outright on OpenShift.
+# PriorityClasses are cluster-scoped and inert until referenced, so this is
+# safe to sync before any GPU stack exists on the node.
+metadata:
+  name: gpu-priority-classes
+  labels:
+    app.kubernetes.io/name: gpu-priority-classes
+    app.kubernetes.io/component: scheduling
+resources:
+  - priority-classes.yaml
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: gpu-infrastructure

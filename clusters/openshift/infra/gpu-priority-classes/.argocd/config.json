@@ -1,0 +1,9 @@
+{
+  "applicationName": "openshift-infra-gpu-priority-classes",
+  "cluster": "openshift",
+  "project": "openshift-infrastructure",
+  "namespace": "gpu-priority-classes",
+  "part": "infra",
+  "syncWave": "4",
+  "sourcePath": "clusters/openshift/infra/gpu-priority-classes"
+}

@@ -51,10 +51,15 @@ while IFS= read -r path; do
 done < <(rg -l 'clusters/talos|\.\./talos' clusters/openshift --glob 'kustomization.yaml' || true)
 
 while IFS= read -r path; do
-  fail "OpenShift Gateway API resources must use *.gateway.apps.sno-ai-lab.vanillax.xyz: $path"
+  fail "OpenShift Gateway API resources must use *.vanillax.xyz, not the cluster's *.apps.sno-ai-lab router domain: $path"
 done < <(
-  rg -n 'apps\.sno-ai-lab\.vanillax\.xyz' clusters/openshift --glob '*.{yaml,yml}' \
-    | rg -v 'gateway\.apps\.sno-ai-lab\.vanillax\.xyz' || true
+  rg -n 'sno-ai-lab\.vanillax\.xyz' clusters/openshift --glob '*.{yaml,yml}' || true
+)
+
+while IFS= read -r path; do
+  fail "OpenShift route points external-dns at the Talos domain (use target: vanillax.xyz): $path"
+done < <(
+  rg -l 'external-dns\.alpha\.kubernetes\.io/target:\s*vanillax\.me' clusters/openshift --glob '*.{yaml,yml}' || true
 )
 
 while IFS= read -r path; do

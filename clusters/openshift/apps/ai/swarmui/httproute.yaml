@@ -10,7 +10,7 @@ spec:
     name: openshift-gateway
     namespace: openshift-ingress
   hostnames:
-  - swarmui.gateway.apps.sno-ai-lab.vanillax.xyz
+  - swarmui.vanillax.xyz
   rules:
   - matches:
     - path:

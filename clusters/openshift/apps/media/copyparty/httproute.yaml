@@ -10,7 +10,7 @@ spec:
     name: openshift-gateway
     namespace: openshift-ingress
   hostnames:
-  - copyparty.gateway.apps.sno-ai-lab.vanillax.xyz
+  - copyparty.vanillax.xyz
   rules:
   - matches:
     - path:

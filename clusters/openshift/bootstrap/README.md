@@ -16,7 +16,7 @@ helm install upstream Argo CD -> apply root Application -> local Argo CD self-ma
 > (CNPG) are all **Helm-installed now** — no OLM operators — so the
 > unresolvable `lvms-operator`/`metallb-operator` catalog gap is gone. What
 > remains live-unverified: `.230` L2 advertisement, authoritative DNS for
-> `*.gateway.apps.sno-ai-lab.vanillax.xyz`, the three Connect bootstrap secrets,
+> `*.vanillax.xyz`, the three Connect bootstrap secrets,
 > and the two TrueNAS driver-config 1Password items. The profile wrapper does
 > not prove `.230`/DNS before installing Argo CD.
 
@@ -40,7 +40,7 @@ Git owns GatewayClass `openshift-default` with controller
 `openshift.io/gateway-controller/v1`, MetalLB operator/config manifests, the
 democratic-csi storage component, the upstream MetalLB Helm chart + config, the
 CNPG database tree, and the dedicated Gateway app domain
-`*.gateway.apps.sno-ai-lab.vanillax.xyz`. Only the `.230` L2 advertisement and
+`*.vanillax.xyz`. Only the `.230` L2 advertisement and
 authoritative DNS still require live verification.
 
 The original feature branch points Argo CD at the original repository's

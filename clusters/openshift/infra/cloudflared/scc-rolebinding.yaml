@@ -1,0 +1,18 @@
+# cloudflared runs non-root (uid 65534, drop ALL caps, RuntimeDefault seccomp).
+# nonroot-v2 admits its securityContext as-is without stripping the UID.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cloudflared-nonroot-v2
+  namespace: cloudflared
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:nonroot-v2
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: cloudflared
+  - kind: ServiceAccount
+    name: cloudflared-restarter
+    namespace: cloudflared

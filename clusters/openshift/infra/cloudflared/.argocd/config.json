@@ -1,0 +1,9 @@
+{
+  "applicationName": "openshift-infra-cloudflared",
+  "cluster": "openshift",
+  "project": "openshift-infrastructure",
+  "namespace": "cloudflared",
+  "part": "infra",
+  "syncWave": "5",
+  "sourcePath": "clusters/openshift/infra/cloudflared"
+}

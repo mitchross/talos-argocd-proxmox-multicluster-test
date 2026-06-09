@@ -1,0 +1,8 @@
+# NVIDIA GPU stack — STAGED, not deployed. See README.md: the AppSet marker
+# is .argocd/config.json.disabled; rename it AFTER the live catalog check
+# proves gpu-operator-certified + nfd exist in the rc.5 catalogs.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - nfd.yaml
+  - gpu-operator.yaml

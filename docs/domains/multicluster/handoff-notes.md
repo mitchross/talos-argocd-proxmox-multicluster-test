@@ -41,13 +41,16 @@ they conflict, this section wins:
 - **Open GPU blocker:** the cluster has NO NVIDIA stack (no Node Feature
   Discovery, no GPU Operator, no `nvidia` RuntimeClass, no `nvidia.com/gpu`
   capacity). llama-cpp, comfyui, swarmui, and llmfit cannot run until one is
-  installed. Decision pending: OLM `gpu-operator-certified` from the
-  `certified-operators` catalog (check
-  `kubectl get packagemanifests -n openshift-marketplace | grep -i gpu` —
-  the rc.5 catalogs were missing lvms/metallb, so verify first) vs the
-  upstream NVIDIA Helm chart (`helm.ngc.nvidia.com/nvidia`, NFD subchart
-  included), which matches this repo's no-OLM workaround pattern. llmfit's
-  dual-GPU job assumes 2 GPUs and will stay Pending on a single-GPU SNO.
+  installed. **A complete OLM-path install is STAGED at
+  `clusters/openshift/infra/gpu-operator/`** (NFD + gpu-operator-certified
+  Subscriptions + ClusterPolicy, kubeconform-validated) but deliberately not
+  discovered — its AppSet marker is `.argocd/config.json.disabled`. Run the
+  live catalog check in that README first
+  (`kubectl get packagemanifests -n openshift-marketplace | grep -Ei
+  'gpu-operator|nfd'` — the rc.5 catalogs were missing lvms/metallb), then
+  rename the marker to enable. Helm fallback documented in the same README.
+  llmfit's dual-GPU job assumes 2 GPUs and will stay Pending on a single-GPU
+  SNO; llama-cpp and comfyui contend for one card without time-slicing.
 - **OpenShift CNPG backups are now declared in Git** (this branch): the
   Barman Cloud plugin (`v0.12.0`, co-located in `cloudnative-pg`, discovered
   by the database AppSet at syncWave 3), a shared `cnpg-s3-credentials`

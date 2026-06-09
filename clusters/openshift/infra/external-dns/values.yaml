@@ -1,0 +1,66 @@
+# ExternalDNS for OpenShift SNO — manages vanillax.xyz records from HTTPRoutes.
+# Mirrors the Talos external-dns; differs only in domain, txtOwnerId, and token.
+
+provider:
+  name: cloudflare
+
+cloudflare:
+  proxied: true
+
+# Watch Gateway API HTTPRoutes
+sources:
+  - gateway-httproute
+
+# Only manage the vanillax.xyz zone (Talos external-dns owns vanillax.me)
+domainFilters:
+  - vanillax.xyz
+
+policy: sync # create/update/delete
+
+registry: txt
+txtOwnerId: openshift-sno # MUST differ from talos-cluster to avoid TXT conflicts
+txtPrefix: "external-dns-"
+
+extraArgs:
+  - --label-filter=external-dns=true
+  - --gateway-label-filter=external-dns-gateway=gateway-external
+  - --cloudflare-proxied
+
+logLevel: info
+logFormat: text
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+# nonroot-v2 SCC admits this UID (see scc-rolebinding.yaml)
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+  seccompProfile:
+    type: RuntimeDefault
+
+podSecurityContext:
+  fsGroup: 65534
+  runAsNonRoot: true
+  runAsUser: 65534
+  seccompProfile:
+    type: RuntimeDefault
+
+env:
+  - name: CF_API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: cloudflare-api-token
+        key: api-token
+
+interval: 1m
+triggerLoopOnEvent: true

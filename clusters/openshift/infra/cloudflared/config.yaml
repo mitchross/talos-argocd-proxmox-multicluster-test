@@ -27,11 +27,8 @@ ingress:
     originRequest:
       noTLSVerify: true
       originServerName: cyberchef.vanillax.xyz
-  - hostname: dvwa.vanillax.xyz
-    service: https://192.168.10.230:443
-    originRequest:
-      noTLSVerify: true
-      originServerName: dvwa.vanillax.xyz
+  # dvwa.vanillax.xyz — app disabled in the shared base; re-add together
+  # with the dvwa httproute kustomization entry.
   - hostname: excalidraw.vanillax.xyz
     service: https://192.168.10.230:443
     originRequest:
@@ -94,11 +91,6 @@ ingress:
     originRequest:
       noTLSVerify: true
       originServerName: nomad.vanillax.xyz
-  - hostname: posthog.vanillax.xyz
-    service: https://192.168.10.230:443
-    originRequest:
-      noTLSVerify: true
-      originServerName: posthog.vanillax.xyz
   - hostname: radar-ng-api.vanillax.xyz
     service: https://192.168.10.230:443
     originRequest:

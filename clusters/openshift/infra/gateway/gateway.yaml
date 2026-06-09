@@ -9,6 +9,13 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "0"
     cert-manager.io/cluster-issuer: cloudflare-cluster-issuer
+    # Default CNAME target for every external-dns-published HTTPRoute on this
+    # Gateway (mirrors the Talos gw-external annotation). Without this, a
+    # route labeled external-dns: "true" but missing its own per-route target
+    # annotation publishes the Gateway's LoadBalancer address — the PRIVATE
+    # MetalLB IP 192.168.10.230 — into public Cloudflare DNS (broken outside
+    # the LAN; searxng hit exactly this).
+    external-dns.alpha.kubernetes.io/target: vanillax.xyz
 spec:
   gatewayClassName: openshift-default
   listeners:

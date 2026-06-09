@@ -62,6 +62,51 @@ done < <(
   rg -l 'external-dns\.alpha\.kubernetes\.io/target:\s*vanillax\.me' clusters/openshift --glob '*.{yaml,yml}' || true
 )
 
+# Drift guard: the cloudflared tunnel allowlist must exactly mirror the set
+# of hostnames on HTTPRoutes labeled external-dns: 'true'. A labeled route
+# missing from cloudflared = public DNS record pointing at a tunnel that 404s
+# it; a cloudflared entry without a labeled route = stale exposure surface.
+# Routes commented out of their kustomization (e.g. kolibri) are also
+# commented in the cloudflared config, so both sides of this comparison use
+# the same source of truth: route files reachable from a kustomization.
+cloudflared_config="clusters/openshift/infra/cloudflared/config.yaml"
+if [ -f "$cloudflared_config" ]; then
+  labeled_hosts="$(
+    rg -l "external-dns: 'true'" clusters/openshift --glob '*httproute*.yaml' \
+      | while IFS= read -r route; do
+          # skip route files no kustomization references via an UNCOMMENTED
+          # resource entry (disabled apps, e.g. kolibri)
+          base="$(basename "$route")"
+          rel="$(dirname "$route")"
+          subpath="$(basename "$rel")/$base"
+          if rg -q "^\s*-\s+(\./)?${base}\s*$" "$rel/kustomization.yaml" 2>/dev/null \
+             || rg -q "^\s*-\s+(\./)?${subpath}\s*$" "$rel/../kustomization.yaml" 2>/dev/null; then
+            # Per-YAML-document: a file can hold an internal AND an external
+            # route (posthog); only hostnames from labeled documents count.
+            awk 'BEGIN{RS="\n---"} /external-dns: .true./ {
+                   n = split($0, lines, "\n")
+                   for (i = 1; i <= n; i++)
+                     if (match(lines[i], /^[[:space:]]+- [a-z0-9.-]+\.vanillax\.xyz[[:space:]]*$/)) {
+                       gsub(/^[[:space:]]+- |[[:space:]]+$/, "", lines[i]); print lines[i]
+                     }
+                 }' "$route" || true
+          fi
+        done | sort -u
+  )"
+  tunnel_hosts="$(
+    rg -o '^\s+- hostname:\s+([a-z0-9.-]+\.vanillax\.xyz)' -r '$1' "$cloudflared_config" \
+      | rg -v '^vanillax\.xyz$' | sort -u
+  )"
+  while IFS= read -r host; do
+    [ -n "$host" ] || continue
+    fail "externally labeled route hostname missing from cloudflared allowlist: $host"
+  done < <(comm -23 <(printf '%s\n' "$labeled_hosts") <(printf '%s\n' "$tunnel_hosts"))
+  while IFS= read -r host; do
+    [ -n "$host" ] || continue
+    fail "cloudflared allowlist entry has no externally labeled route: $host"
+  done < <(comm -13 <(printf '%s\n' "$labeled_hosts") <(printf '%s\n' "$tunnel_hosts"))
+fi
+
 while IFS= read -r path; do
   fail "escaped inline patch string remains: $path"
 done < <(

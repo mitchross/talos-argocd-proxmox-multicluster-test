@@ -89,12 +89,23 @@ validate_cluster() {
     return
   fi
 
+  # Talos is the complete production reference, so its overlay count must
+  # equal the shared base count. Other clusters opt in per-app (curated lab
+  # subsets), so they only need a non-empty catalog; per-overlay validity is
+  # enforced by validate-cluster-layout.sh.
   echo "--- Check 0: App overlay count ---"
   app_count="$(app_overlay_dirs "$cluster" | wc -l | xargs)"
-  if [ "$app_count" -ne 44 ]; then
-    fail "expected 44 $cluster app overlays, found $app_count"
+  base_count="$(find manifests/apps -mindepth 3 -maxdepth 3 -type d -name base | wc -l | xargs)"
+  if [ "$cluster" = "talos" ]; then
+    if [ "$app_count" -ne "$base_count" ]; then
+      fail "expected $base_count talos app overlays (one per shared base), found $app_count"
+    else
+      echo "  OK: Found $app_count app overlays (matches shared base count)"
+    fi
+  elif [ "$app_count" -lt 1 ]; then
+    fail "expected at least 1 $cluster app overlay, found none"
   else
-    echo "  OK: Found 44 app overlays"
+    echo "  OK: Found $app_count app overlays (opt-in cluster)"
   fi
   echo ""
 

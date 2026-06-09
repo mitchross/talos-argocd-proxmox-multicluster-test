@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: posthog
-  labels:
-    volsync.backube/privileged-movers:

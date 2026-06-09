@@ -5,6 +5,9 @@
 # openshift-gateway at the MetalLB VIP 192.168.10.230. The default OpenShift
 # router wildcard *.apps.sno-ai-lab.vanillax.xyz -> 192.168.10.10 stays in
 # Cloudflare and is NOT duplicated here.
+#
+# SNO runs the curated lab subset (AI stack + one app per kustomize pattern
+# class), not Talos parity — see docs/adding-a-cluster.md.
 
 # ==========================================
 # EXTERNAL SERVICES (Optional - for LAN speed)
@@ -12,26 +15,8 @@
 # and tunneled by cloudflared; local entries just skip the round-trip.
 # ==========================================
 
-convertx.vanillax.xyz    192.168.10.230
-cyberchef.vanillax.xyz    192.168.10.230
-# dvwa.vanillax.xyz    192.168.10.230   # app disabled in shared base
 excalidraw.vanillax.xyz    192.168.10.230
-fizzy.vanillax.xyz    192.168.10.230
-flatnotes.vanillax.xyz    192.168.10.230
-home-project-nomad-kiwix.vanillax.xyz    192.168.10.230
-ingest-posthog.vanillax.xyz    192.168.10.230
-it-tools.vanillax.xyz    192.168.10.230
-karakeep.vanillax.xyz    192.168.10.230
-libreddit.vanillax.xyz    192.168.10.230
-mailpit.vanillax.xyz    192.168.10.230
-media-kiwix.vanillax.xyz    192.168.10.230
-news.vanillax.xyz    192.168.10.230
-nomad.vanillax.xyz    192.168.10.230
-radar-ng-api.vanillax.xyz    192.168.10.230
-redlib.vanillax.xyz    192.168.10.230
 search.vanillax.xyz    192.168.10.230
-vert.vanillax.xyz    192.168.10.230
-# kolibri.vanillax.xyz    192.168.10.230   # route disabled (broken image)
 
 # ==========================================
 # INTERNAL SERVICES (Required - LAN ONLY!)
@@ -41,24 +26,9 @@ vert.vanillax.xyz    192.168.10.230
 
 argocd.vanillax.xyz    192.168.10.230
 comfyui.vanillax.xyz    192.168.10.230
-copyparty.vanillax.xyz    192.168.10.230
-echo.vanillax.xyz    192.168.10.230
-frigate.vanillax.xyz    192.168.10.230
 gitea.vanillax.xyz    192.168.10.230
-headlamp.vanillax.xyz    192.168.10.230
-homeassistant.vanillax.xyz    192.168.10.230
-homepage.vanillax.xyz    192.168.10.230
-jellyfin.vanillax.xyz    192.168.10.230
 llama.vanillax.xyz    192.168.10.230
-n8n.vanillax.xyz    192.168.10.230
 nginx.vanillax.xyz    192.168.10.230
 open-webui.vanillax.xyz    192.168.10.230
-pairdrop.vanillax.xyz    192.168.10.230
-paperless.vanillax.xyz    192.168.10.230
-posthog.vanillax.xyz    192.168.10.230
 perplexica.vanillax.xyz    192.168.10.230
-photos.vanillax.xyz    192.168.10.230
-stirling.vanillax.xyz    192.168.10.230
 swarmui.vanillax.xyz    192.168.10.230
-temporal.vanillax.xyz    192.168.10.230
-wyze-bridge.vanillax.xyz    192.168.10.230

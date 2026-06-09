@@ -1,9 +1,0 @@
-{
-  "applicationName": "openshift-database-cloudnative-pg-paperless",
-  "cluster": "openshift",
-  "project": "openshift-infrastructure",
-  "namespace": "cloudnative-pg",
-  "part": "database",
-  "syncWave": "4",
-  "sourcePath": "clusters/openshift/database/cloudnative-pg/paperless"
-}

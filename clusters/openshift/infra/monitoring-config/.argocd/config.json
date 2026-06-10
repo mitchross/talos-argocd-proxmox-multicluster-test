@@ -1,0 +1,9 @@
+{
+  "applicationName": "openshift-infra-monitoring-config",
+  "cluster": "openshift",
+  "project": "openshift-infrastructure",
+  "namespace": "openshift-monitoring",
+  "part": "infra",
+  "syncWave": "4",
+  "sourcePath": "clusters/openshift/infra/monitoring-config"
+}

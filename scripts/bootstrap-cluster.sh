@@ -179,7 +179,7 @@ print_dry_run() {
     echo "OSSM v2: verify no conflicting subscription"
     echo "OLM packages: none required (storage/LB/DB are Helm-installed)"
     echo "MetalLB: upstream Helm chart + config via Argo (192.168.10.230-192.168.10.240)"
-    echo "Gateway DNS: use *.gateway.apps.sno-ai-lab.vanillax.xyz, not the default *.apps router wildcard"
+    echo "Gateway DNS: use *.vanillax.xyz via openshift-gateway (MetalLB 192.168.10.230), not the default *.apps router wildcard"
   fi
 
   echo "Secret gate: verify 1passwordconnect/1password-credentials"

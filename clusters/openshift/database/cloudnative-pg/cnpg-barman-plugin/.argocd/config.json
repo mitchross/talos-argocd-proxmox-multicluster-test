@@ -1,0 +1,9 @@
+{
+  "applicationName": "openshift-database-cloudnative-pg-cnpg-barman-plugin",
+  "cluster": "openshift",
+  "project": "openshift-infrastructure",
+  "namespace": "cloudnative-pg",
+  "part": "database",
+  "syncWave": "3",
+  "sourcePath": "clusters/openshift/database/cloudnative-pg/cnpg-barman-plugin"
+}

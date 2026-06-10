@@ -52,6 +52,7 @@ needed.
 
 ### 🛠️ Operate the platform
 
+- **[adding-a-cluster](adding-a-cluster.md)** — the n-cluster onboarding path: cluster tree anatomy, 1:1 parity contract, per-app overlay shape, CI guardrails.
 - **[volsync-storage-recovery](volsync-storage-recovery.md)** — PVC backup/restore single source of truth + restore-drill runbook.
 - **[kopia-maintenance-plan](domains/storage/kopia-maintenance-plan.md)** — repository maintenance (healthy; manual full not needed).
 - **[storage-architecture-future](domains/storage/architecture-future.md)** — Longhorn-vs-restore-DR tiering (future idea).

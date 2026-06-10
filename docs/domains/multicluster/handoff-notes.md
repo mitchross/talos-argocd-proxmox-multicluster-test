@@ -5,6 +5,133 @@
 > structural migration is locally accepted, but the live OpenShift target is
 > **not ready for bootstrap** as of June 4, 2026.
 
+## June 9, 2026 (latest) — reformat to 4.21 GA planned; LVMS staged for the second SSD
+
+Operator decisions (this date):
+
+- **The SNO will be REINSTALLED at 4.21 GA via the Assisted Installer** (same
+  wizard as the original install). There is no downgrade path from
+  4.22.0-rc.5, the cluster carries no workloads yet, and Git is the source of
+  truth — reinstall + `scripts/bootstrap-cluster.sh openshift` is the cheap
+  and correct move. Stop treating rc.5 catalog gaps as a live constraint;
+  treat 4.21 GA as the target platform and fix workarounds accordingly.
+- **The box has a SECOND SSD → LVM Storage (LVMS).** A complete staged entry
+  exists at `clusters/openshift/infra/lvm-storage/` (Namespace +
+  OperatorGroup + Subscription + LVMCluster, marker
+  `.argocd/config.json.disabled`). Its README has the full enable checklist:
+  catalog check, find the disk's `/dev/disk/by-id` path, `wipefs`, fill in
+  the placeholder, flip the marker. Resulting class: `lvms-vg1` (NOT
+  default; CSI snapshots/clones — the future VolSync/pvc-plumber path on
+  this cluster). TrueNAS iSCSI stays the `vanillax-local-rwo` default for
+  app data that must survive reinstalls. `local-path-provisioner` becomes a
+  retirement candidate once LVMS is live. ODF/Ceph was considered and
+  rejected (3-node Ceph platform, wrong for SNO); Longhorn-on-OpenShift was
+  considered and rejected (possible, but LVMS is the native equivalent
+  without iscsid MachineConfigs/SCC grants).
+- **Minimal-OLM stance, stated explicitly:** no console-clicked OperatorHub
+  installs, no OpenShift GitOps operator — ever. OLM Subscriptions ARE
+  acceptable when declared in Git and synced by our own Argo CD, but only
+  for products that ship exclusively through OLM (LVMS, NVIDIA
+  certified GPU operator + NFD). Everything with a viable Helm path stays
+  Helm (MetalLB, cert-manager, external-dns, truenas-csi, cloudflared, ...)
+  — on GA this is now a *preference*, no longer a catalog workaround.
+- **After the reinstall**, the GPU stack catalog check
+  (`clusters/openshift/infra/gpu-operator/README.md`) is expected to pass on
+  the GA catalog; flip that marker too.
+
+## June 9, 2026 (later) — 1:1 parity is deliberate; do NOT trim overlays
+
+Operator decision (explicit, this date): **keep full 1:1 app parity between
+Talos and OpenShift in Git.** The complete overlay catalog is the proof that
+the Kustomize layout ports across distributions — that is the repo's purpose
+(work-learning: "Kubernetes is Kubernetes", lab vs prod). Duplicate running
+apps (immich, frigate, ...) are acceptable; the operator will power things
+off **by hand at runtime** as desired. A curated-subset trim was attempted
+and reverted the same day — do not re-attempt it. Agents: never delete
+`clusters/openshift/apps` overlays to "reduce scope"; CI enforces parity in
+both directions (overlay count derived from `manifests/apps`, plus an
+orphan-overlay guard). The n-cluster onboarding path is documented in
+`docs/adding-a-cluster.md`.
+
+## June 9, 2026 Update — supersedes stale details below
+
+The tree moved past several statements in the body of this document. Where
+they conflict, this section wins:
+
+- **Storage: democratic-csi was replaced by the official iXsystems
+  `truenas-csi` driver** (`csi.truenas.io`, vendored v1.0.4, commit
+  `99c3576`). TrueNAS 26 removed the REST API democratic-csi depends on; the
+  official driver uses the WebSocket API. `vanillax-local-rwo` (default,
+  iSCSI zvols under `BigTank/k8s/iscsi/v`, `reclaimPolicy: Retain`) and
+  `truenas-nfs-csi` (RWX NFS under `BigTank/k8s/nfs/v`) are both provisioned
+  by `csi.truenas.io`. See `clusters/openshift/infra/truenas-csi/`.
+  - **Secret contract changed:** the two `democratic-csi-truenas-{iscsi,nfs}`
+    1Password items described below are obsolete. The driver now reads ONE
+    item, `truenas-csi` (field `apiKey`), in `homelab-prod`, via the
+    `truenas-api-credentials` ExternalSecret.
+- **Route/domain model changed: OpenShift Gateway apps use flat
+  `*.vanillax.xyz`**, not `*.gateway.apps.sno-ai-lab.vanillax.xyz`. The
+  single `openshift-gateway` (namespace `openshift-ingress`, MetalLB
+  `192.168.10.230`) carries listeners for `*.vanillax.xyz`; cert-manager's
+  gateway-shim issues `cert-openshift-gateway-apps` from the Gateway
+  annotation; cloudflared tunnels `*.vanillax.xyz` to `.230:443`; external-dns
+  (txtOwnerId `openshift-sno`, domainFilter `vanillax.xyz`) publishes ONLY
+  routes labeled `external-dns: "true"`. Internal-only apps have no public
+  DNS record and need Firewalla local DNS entries for `vanillax.xyz` →
+  `192.168.10.230` (the existing `firewalla-dns-config.txt` covers only
+  `vanillax.me`). The default OpenShift router keeps
+  `*.apps.sno-ai-lab.vanillax.xyz` → `.10` untouched. The validators in
+  `scripts/` now enforce the flat-domain model.
+- **GPU PriorityClasses now exist on OpenShift**
+  (`clusters/openshift/infra/gpu-priority-classes/`). The shared AI bases
+  reference `gpu-workload-high`/`gpu-workload-preemptible` by name, and a
+  missing PriorityClass rejects pod creation outright.
+- **Open GPU blocker:** the cluster has NO NVIDIA stack (no Node Feature
+  Discovery, no GPU Operator, no `nvidia` RuntimeClass, no `nvidia.com/gpu`
+  capacity). llama-cpp, comfyui, swarmui, and llmfit cannot run until one is
+  installed. **A complete OLM-path install is STAGED at
+  `clusters/openshift/infra/gpu-operator/`** (NFD + gpu-operator-certified
+  Subscriptions + ClusterPolicy, kubeconform-validated) but deliberately not
+  discovered — its AppSet marker is `.argocd/config.json.disabled`. Run the
+  live catalog check in that README first
+  (`kubectl get packagemanifests -n openshift-marketplace | grep -Ei
+  'gpu-operator|nfd'` — the rc.5 catalogs were missing lvms/metallb), then
+  rename the marker to enable. Helm fallback documented in the same README.
+  llmfit's dual-GPU job assumes 2 GPUs and will stay Pending on a single-GPU
+  SNO; llama-cpp and comfyui contend for one card without time-slicing.
+- **OpenShift CNPG backups are now declared in Git** (this branch): the
+  Barman Cloud plugin (`v0.12.0`, co-located in `cloudnative-pg`, discovered
+  by the database AppSet at syncWave 3), a shared `cnpg-s3-credentials`
+  ExternalSecret (`postgres-global-secrets`, reads the SAME 1Password
+  `rustfs` item Talos uses — no new pre-seed), and per-DB
+  ObjectStore + ScheduledBackup + `spec.plugins` for all 4 Clusters.
+  - **Lineage isolation from Talos is structural:** destinationPath uses
+    `s3://postgres-backups/cnpg-sno/<db>` (Talos uses `cnpg/<db>`) AND
+    serverName is `<db>-database-sno-v1`. Never share a prefix or serverName
+    across clusters.
+  - Schedules run on the half-hour (immich 02:30, temporal 03:30, gitea
+    04:30, paperless 05:30) so the two clusters never hit RustFS together.
+  - Each DB also has an inactive `overlays/recovery` mirroring the Talos DR
+    flow: bump base serverName to sno-vN+1, point the recovery overlay at
+    sno-vN, flip the root kustomization line, delete Cluster + PVCs.
+  - Live verification still pending: first `Backup` CR must reach
+    `completed` and `barman-cloud` WAL archiving must go green on each
+    Cluster after bootstrap.
+- **cloudflared ingress is now an explicit hostname allowlist** (this
+  branch) — the previous `*.vanillax.xyz` wildcard would have exposed
+  internal apps (Home Assistant, Frigate, Paperless, ArgoCD) publicly the
+  moment any wildcard DNS record appeared. Adding an external app now means:
+  label the HTTPRoute `external-dns: "true"` AND add the hostname to
+  `clusters/openshift/infra/cloudflared/config.yaml`.
+- **LAN DNS for vanillax.xyz**: `firewalla-dns-config-xyz.txt` (repo root)
+  lists every internal hostname → `192.168.10.230`; internal apps resolve
+  ONLY via Firewalla, never Cloudflare.
+- **User-workload monitoring is enabled in Git**
+  (`clusters/openshift/infra/monitoring-config/`): OpenShift-native UWM
+  Prometheus (capped 7d/2GiB/1Gi RAM), CNPG `enablePodMonitor: true` on all
+  4 Clusters. No Prometheus Operator is installed — the platform owns the
+  monitoring.coreos.com CRDs on OpenShift.
+
 ## Current Direction
 
 The branch uses a cluster-centric Kustomize layout:

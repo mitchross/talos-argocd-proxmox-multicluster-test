@@ -1,0 +1,9 @@
+{
+  "applicationName": "openshift-infra-lvm-storage",
+  "cluster": "openshift",
+  "project": "openshift-infrastructure",
+  "namespace": "openshift-storage",
+  "part": "infra",
+  "syncWave": "1",
+  "sourcePath": "clusters/openshift/infra/lvm-storage"
+}

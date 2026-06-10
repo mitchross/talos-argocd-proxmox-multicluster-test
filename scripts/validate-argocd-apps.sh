@@ -89,12 +89,17 @@ validate_cluster() {
     return
   fi
 
-  echo "--- Check 0: App overlay count ---"
+  # 1:1 parity contract: every shared app base has an overlay in EVERY
+  # cluster — the full overlay catalog is the proof that the Kustomize layout
+  # ports across distributions. Count is derived from manifests/apps so
+  # adding an app never requires touching this script.
+  echo "--- Check 0: App overlay count (1:1 parity) ---"
   app_count="$(app_overlay_dirs "$cluster" | wc -l | xargs)"
-  if [ "$app_count" -ne 44 ]; then
-    fail "expected 44 $cluster app overlays, found $app_count"
+  base_count="$(find manifests/apps -mindepth 3 -maxdepth 3 -type d -name base | wc -l | xargs)"
+  if [ "$app_count" -ne "$base_count" ]; then
+    fail "expected $base_count $cluster app overlays (one per shared base), found $app_count"
   else
-    echo "  OK: Found 44 app overlays"
+    echo "  OK: Found $app_count app overlays (matches shared base count)"
   fi
   echo ""
 

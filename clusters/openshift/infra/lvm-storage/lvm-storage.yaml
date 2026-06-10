@@ -1,0 +1,66 @@
+# LVM Storage (LVMS) — Red Hat's native local storage for single-node
+# OpenShift. Thin-provisioned LVM on the node's SECOND SSD with full CSI
+# snapshot/clone support. OLM-only product (no upstream Helm chart), so this
+# is one of the few Git-declared Subscriptions in the repo — see README.md
+# for the minimal-OLM stance. Subscription omits `channel:` -> OLM uses the
+# package defaultChannel.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-storage
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-storage-operatorgroup
+  namespace: openshift-storage
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  targetNamespaces:
+    - openshift-storage
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: lvms-operator
+  namespace: openshift-storage
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  name: lvms-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+---
+# Operand instance. The deviceSelector path below is a PLACEHOLDER — fill in
+# the second SSD's stable /dev/disk/by-id/ path before enabling (README.md
+# has the discovery commands). The disk must carry no filesystem or
+# partition-table signatures or LVMS will refuse it. CR fails until the CSV
+# installs the CRD; AppSet retry + selfHeal lands it (same pattern as nfd).
+#
+# Resulting StorageClass is named lvms-vg1 (NOT the cluster default —
+# vanillax-local-rwo/TrueNAS stays default for app data) plus a matching
+# VolumeSnapshotClass, which is what later unlocks VolSync on this cluster.
+apiVersion: lvm.topolvm.io/v1alpha1
+kind: LVMCluster
+metadata:
+  name: lvmcluster
+  namespace: openshift-storage
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  storage:
+    deviceClasses:
+      - name: vg1
+        default: false
+        fstype: xfs
+        deviceSelector:
+          paths:
+            - /dev/disk/by-id/CHANGEME-second-ssd
+        thinPoolConfig:
+          name: thin-pool-1
+          sizePercent: 90
+          overprovisionRatio: 10

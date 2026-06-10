@@ -6,7 +6,7 @@ metadata:
   labels:
     external-dns: 'true'
   annotations:
-    external-dns.alpha.kubernetes.io/target: vanillax.me
+    external-dns.alpha.kubernetes.io/target: vanillax.xyz
 spec:
   parentRefs:
   - group: gateway.networking.k8s.io

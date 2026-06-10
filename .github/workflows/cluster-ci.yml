@@ -30,6 +30,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # The validators' guard checks use ripgrep. Without it, every
+      # `rg ... || true` guard silently skipped on the runner (rg: command
+      # not found is swallowed by || true) — the guards only ever ran on
+      # operator machines. Discovered 2026-06-09 when a new guard without
+      # || true exited 127.
+      - name: Install ripgrep
+        run: sudo apt-get update -q && sudo apt-get install -y -q ripgrep
+
       - name: Validate ArgoCD app topology
         run: |
           bash ./scripts/validate-cluster-layout.sh
@@ -52,6 +60,12 @@ jobs:
         uses: azure/setup-helm@v4
         with:
           version: v3.16.2
+
+      # validate-openshift-app-renders.sh's render-content guards
+      # (Talos parentRefs, router-domain hostnames) are rg-based and were
+      # silently no-ops without ripgrep on the runner.
+      - name: Install ripgrep
+        run: sudo apt-get update -q && sudo apt-get install -y -q ripgrep
 
       - name: Validate OpenShift app portability
         run: bash ./scripts/validate-openshift-app-renders.sh

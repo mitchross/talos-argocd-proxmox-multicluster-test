@@ -1,0 +1,34 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: gitea-database
+spec:
+  bootstrap:
+    recovery:
+      source: gitea-recovery-source
+      database: gitea
+      owner: gitea
+      secret:
+        name: gitea-app-secret
+      # No recoveryTarget -> restore to latest WAL available on S3. For PITR
+      # add, e.g.:
+      #   recoveryTarget:
+      #     targetTime: "2026-06-01T12:40:00Z"
+      # ONLY with a targetTime verifiably present in the source lineage's
+      # wals/ prefix (see the Talos gitea recovery overlay for the landmine
+      # this avoids).
+  # Plugin-shape externalClusters. Reuses the prod ObjectStore CR
+  # (base/objectstore.yaml) — same bucket, creds, endpoint; only serverName
+  # selects the lineage subtree under cnpg-sno/gitea/.
+  externalClusters:
+    - name: gitea-recovery-source
+      plugin:
+        name: barman-cloud.cloudnative-pg.io
+        parameters:
+          barmanObjectName: gitea-objectstore
+          # Lineage to recover FROM. Keep at N-1 relative to
+          # base/cluster.yaml's serverName — bump BOTH in lockstep per the
+          # procedure in kustomization.yaml. sno-v1 is the first (current)
+          # SNO lineage; valid as a recovery source only after base has been
+          # bumped to sno-v2.
+          serverName: gitea-database-sno-v1

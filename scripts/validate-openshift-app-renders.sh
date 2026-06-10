@@ -42,8 +42,8 @@ if rg -n 'name:\s*gateway-(internal|external)' "$RENDERED"; then
   fail "OpenShift app renders contain a Talos Gateway parentRef"
 fi
 
-if rg -n 'apps\.sno-ai-lab\.vanillax\.xyz' "$RENDERED" | rg -v 'gateway\.apps\.sno-ai-lab\.vanillax\.xyz'; then
-  fail "OpenShift app renders must use the dedicated Gateway API subdomain"
+if rg -n 'sno-ai-lab\.vanillax\.xyz' "$RENDERED"; then
+  fail "OpenShift app renders must use *.vanillax.xyz, not the cluster's *.apps.sno-ai-lab router domain"
 fi
 
 if [ "$ERRORS" -gt 0 ]; then

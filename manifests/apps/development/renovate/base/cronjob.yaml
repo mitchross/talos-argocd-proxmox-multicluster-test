@@ -8,8 +8,10 @@ metadata:
 spec:
   # Poll hourly for LAN-registry image updates. Offset from the top of the hour
   # to avoid the common CronJob burst. concurrencyPolicy=Forbid prevents overlap.
+  # No spec.timeZone: the controller default is already UTC, and the OpenShift
+  # 4.22.0-rc.5 kube-state-metrics image lacks tzdata — any CronJob with a
+  # timeZone crash-loops KSM and takes the monitoring ClusterOperator down.
   schedule: "17 * * * *"
-  timeZone: "Etc/UTC"
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 600
   successfulJobsHistoryLimit: 1

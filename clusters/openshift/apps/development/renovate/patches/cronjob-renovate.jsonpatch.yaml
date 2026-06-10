@@ -1,3 +1,9 @@
+# Renovate runs from the Talos cluster only; a second self-hosted bot on the
+# SNO would double-run against the same Git repos. Keep the overlay for 1:1
+# parity (CI-enforced) but never schedule it here.
+- op: add
+  path: "/spec/suspend"
+  value: true
 - op: remove
   path: "/spec/jobTemplate/spec/template/spec/securityContext/runAsUser"
 - op: remove

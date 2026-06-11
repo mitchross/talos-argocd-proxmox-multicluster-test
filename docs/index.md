@@ -21,11 +21,13 @@ needed.
 > - migration campaign **closed** — no remaining candidates
 
 > [!WARNING]
-> **Current multicluster/OpenShift state (2026-06-04):**
-> - structural migration locally accepted on `feat/one-shot-multicluster-kustomize`
-> - isolated live-test repo: `mitchross/talos-argocd-proxmox-multicluster-test`
-> - live OpenShift `sno-ai-lab` is **not ready for bootstrap**
-> - unresolved LVM Storage, unverified MetalLB/Gateway `.230`, and DNS proof
+> **Current multicluster/OpenShift state (2026-06-11):**
+> - live OpenShift `sno-ai-lab` is **bootstrapped and on 4.22.0 GA**
+>   (inline-upgraded from rc.5 — the "reformat at 4.21 GA" plan is dead);
+>   local Argo CD runs 67 Applications
+> - stabilization is **in progress**: many apps are Degraded (storage data
+>   path, Gateway TLS cert, per-app SCC crashes) — see the handoff notes'
+>   2026-06-11 section for the live triage and the pre-Talos-nuke checklist
 > - read [multicluster handoff notes](domains/multicluster/handoff-notes.md)
 >   before OpenShift or multicluster work
 

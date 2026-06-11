@@ -13,6 +13,12 @@ which demonstrably had at least one package), and NFD comes from
 `redhat-operators` (the one with known gaps) — so this path must be proven
 against the live cluster before it can be wired in.
 
+> **2026-06-11 update:** the cluster inline-upgraded to **4.22.0 GA** and the
+> catalog check below now **passes** — both `gpu-operator-certified`
+> (Certified Operators) and `nfd` (Red Hat Operators) are published. This
+> entry is ready to enable; only the marker rename remains. (`lvms-operator`
+> is still absent from the 4.22 catalogs — that staging is unrelated.)
+
 ## Enable procedure
 
 1. **Catalog check (live):**

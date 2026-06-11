@@ -1,11 +1,15 @@
-# LVM Storage (LVMS) — staged for the 4.21 GA reinstall
+# LVM Storage (LVMS) — staged until the 4.22 catalog publishes it
 
 Red Hat's purpose-built local storage for single-node OpenShift: thin LVM on
 the node's **second SSD**, with CSI **snapshots and clones** (the feature
 TrueNAS-only SNO lacks, and the prerequisite for ever extending the
-VolSync/pvc-plumber backup flow to this cluster). The rc.5
-`redhat-operators` catalog did not publish `lvms-operator`; the 4.21 GA
-catalog does — this entry stays staged until the reinstall.
+VolSync/pvc-plumber backup flow to this cluster). The cluster
+inline-upgraded `4.22.0-rc.5 → 4.22.0 GA` on 2026-06-10 (**no reinstall** —
+the earlier "reformat at 4.21 GA" plan is superseded), but as of 2026-06-11
+the v4.22 `redhat-operators` index still does not publish `lvms-operator`
+(verified against a freshly pulled catalog, not a stale image). The catalogs
+re-poll every 240 minutes; this entry stays staged until the packagemanifest
+appears.
 
 ## Why an OLM Subscription when this repo avoids OperatorHub
 
@@ -17,7 +21,10 @@ That is the same staging pattern as `../gpu-operator/`. Everything with a
 viable Helm path (MetalLB, cert-manager, external-dns, truenas-csi, ...) stays
 Helm.
 
-## Enable checklist (run AFTER the 4.21 GA reinstall)
+## Enable checklist (run once the catalog publishes `lvms-operator`)
+
+No reinstall is required — `wipefs` + the LVMCluster claim the second SSD on
+the live cluster.
 
 1. **Catalog check** — prove the GA catalog publishes the package:
 

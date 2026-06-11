@@ -125,8 +125,10 @@ docs/                   # Documentation
   `clusters/openshift/infra/truenas-csi/`. OpenShift also gets a dynamic
   `truenas-nfs-csi` RWX class; the static `csi-driver-nfs`/`smb` shares remain
   for media apps with pre-existing data. **LVMS is STAGED** at
-  `clusters/openshift/infra/lvm-storage/` (disabled marker) for the planned
-  4.21 GA reinstall — the rc.5 catalog didn't publish it. It claims the
+  `clusters/openshift/infra/lvm-storage/` (disabled marker) — the SNO
+  inline-upgraded to 4.22.0 GA on 2026-06-10 (no reinstall), but
+  `lvms-operator` is still absent from the 4.22 GA catalogs as of 2026-06-11;
+  enable it once the packagemanifest appears. It claims the
   node's second SSD as a fast node-local `lvms-vg1` class (NOT default, CSI
   snapshots — the future VolSync path on OpenShift); shared bases must never
   name `lvms-vg1` directly (CI enforces). A node-local `local-path` class

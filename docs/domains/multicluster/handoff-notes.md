@@ -1,11 +1,135 @@
 # Multi-Cluster Handoff Notes
 
 > **Canonical continuation note:** Read this file before any multicluster,
-> OpenShift, Gateway API, LVM Storage, route-domain, or bootstrap work. The
-> structural migration is locally accepted, but the live OpenShift target is
-> **not ready for bootstrap** as of June 4, 2026.
+> OpenShift, Gateway API, LVM Storage, route-domain, or bootstrap work.
+> As of June 11, 2026 the SNO is **bootstrapped, on 4.22.0 GA, and being
+> stabilized** — the June 10–11 section below is authoritative; older
+> sections (including the June 9 "reformat at 4.21 GA" plan and every
+> "not ready for bootstrap" claim) are historical record only.
 
-## June 9, 2026 (latest) — reformat to 4.21 GA planned; LVMS staged for the second SSD
+## June 10–11, 2026 (LATEST, supersedes June 9) — 4.22.0 GA inline upgrade done; SNO bootstrapped; live stabilization triage
+
+Operator decisions and verified facts (these dates):
+
+- **4.22.0 GA shipped and the SNO inline-upgraded — the reformat plan is
+  dead.** Path taken: fix the upgrade blocker (below), `oc adm upgrade
+  channel candidate-4.22` (the GA release is not reachable from rc.5 inside
+  `stable-4.22`), `oc adm upgrade --to=4.22.0`, then back to `stable-4.22`.
+  Completed 2026-06-11; all ClusterOperators healthy at 4.22.0. Reinstall via
+  Assisted Installer remains only a disaster fallback.
+- **The SNO IS fully bootstrapped** (contrary to older sections of this file):
+  local upstream Helm Argo CD in `argocd`, **67 Applications**,
+  external-secrets + 1passwordconnect live, CNPG with all 4 databases
+  healthy. Live app changes MUST go through Git — Argo selfHeal reverts
+  kubectl edits.
+- **Upgrade blocker root cause (fixed, commit `c9c2ac32`):** the rc.5
+  kube-state-metrics image lacked tzdata; ANY CronJob with `spec.timeZone`
+  panicked KSM → monitoring ClusterOperator down → CVO `Failing=True` refused
+  to start the update. Fix: renovate base drops `timeZone`; the OpenShift
+  overlay sets `suspend: true` (the bot runs from Talos only). Standing rule:
+  **never set `spec.timeZone` on CronJobs in this repo.**
+- **Catalog state (verified fresh on 2026-06-11, not a stale image):**
+  `gpu-operator-certified` + `nfd` ARE published → the staged
+  `clusters/openshift/infra/gpu-operator/` entry is enable-ready.
+  `lvms-operator` is still ABSENT from the v4.22 index → LVMS stays staged;
+  catalogs re-poll every 240m, recheck with
+  `kubectl get packagemanifests -n openshift-marketplace | grep -i lvms`.
+  (Red herring note: catalog pods' main container image is
+  `quay.io/openshift-release-dev/ocp-v4.0-art-dev@…` — that is the opm
+  registry-server from the release payload, NOT leftover rc mirroring; the
+  index content comes from the `extract-content` init container pulling
+  `registry.redhat.io/redhat/redhat-operator-index:v4.22` with
+  `pullPolicy: Always`.)
+
+### Live stabilization triage (2026-06-11) — what is actually broken and why
+
+Cluster core is healthy; the app layer is not. ~36 of 67 Applications not
+Synced/Healthy, ~29 pods down, all failures pre-dating the upgrade (present
+since bootstrap). Root causes, triaged:
+
+1. **[FIXED in Git, this commit] csi-driver-nfs / csi-driver-smb pods were
+   SCC-forbidden since bootstrap.** The upstream charts create no SCCs;
+   restricted-v2 rejected every controller/node pod (hostNetwork, hostPath,
+   privileged), so `nfs.csi.k8s.io`/`smb.csi.k8s.io` never registered on the
+   node. Symptom signature: Argo app "Synced/Degraded" with ZERO pods in the
+   namespace, NFS mounts failing "driver name not found", dynamic SMB PVCs
+   Pending on "waiting for external provisioner". Fix mirrors the
+   metallb/cert-manager pattern: `scc-rolebinding.yaml` in each overlay
+   granting `system:openshift:scc:privileged` to the 4 chart SAs.
+2. **[USER ACTION — TrueNAS/iSCSI data path broken cluster-wide.]** Every
+   `vanillax-local-rwo` (iSCSI) mount fails:
+   `iscsiadm sendtargets to 192.168.10.133:3260 → exit 21` (portal answers —
+   TCP 3260 is open — but returns no targets for this initiator). Provisioning
+   works (PVCs Bound), staging fails, so pods sit in ContainerCreating
+   (immich-ml, jellyfin, posthog clickhouse, zomboid, …). Likely related:
+   the `truenas-api-credentials` ExternalSecret has failed for ~4 days with
+   "could not get secret data from provider" — check the 1Password
+   `truenas-csi` item (field `apiKey`) AND the TrueNAS iSCSI target/initiator
+   config (did a TrueNAS change ~June 7 revoke the key + drop the targets?).
+3. **[USER ACTION — Gateway TLS cert never issued → all HTTPRoutes down.]**
+   `Gateway/openshift-gateway` listener references
+   `openshift-ingress/cert-openshift-gateway-apps`, which doesn't exist:
+   the ACME DNS01 challenges have been pending for days with *"Found no Zones
+   for domain _acme-challenge.vanillax.xyz"* — the Cloudflare API token (the
+   shared item from the Talos/vanillax.me setup) is **not scoped to the
+   vanillax.xyz zone**. Fix in the Cloudflare dashboard (token zone scope);
+   cert-manager will finish on its own. This also keeps the
+   `openshift-infra-gateway` app stuck OutOfSync/Degraded.
+4. **[PRE-NUKE LANDMINE — `registry.vanillax.me` is unresolvable from the
+   SNO node]** (`lookup registry.vanillax.me: no such host` via node DNS) →
+   ImagePullBackOff for every LAN-registry image (news-reader v0.2.4;
+   radar-ng app Missing). The registry and its DNS live behind Talos-side
+   infrastructure. See the pre-nuke checklist below.
+5. **[CAMPAIGN — per-app SCC crashes, ~15 apps, never worked on OpenShift.]**
+   Pattern proven on nginx-example: image needs a writable path
+   (`mkdir /var/cache/nginx: Permission denied`) or a fixed UID under
+   restricted-v2's random UID. Affected (500+ restarts each since bootstrap):
+   nginx-example, home-assistant, fizzy, karakeep, n8n, pairdrop, excalidraw,
+   stirling-pdf, vert, paperless-ngx, perplexica, qdrant + kafka
+   (project-nomad/posthog), headlamp (`runAsNonRoot` + non-numeric image
+   user — needs an explicit numeric `runAsUser`). Each needs an OpenShift
+   overlay patch (writable emptyDir mounts, numeric UID, or an unprivileged
+   image variant). This is a follow-up campaign — do NOT bulk-"fix" by
+   loosening SCCs cluster-wide.
+6. **[RESIDUE — console-installed OLM operators, violates the minimal-OLM
+   stance, none in Git:]** loki-operator v6.5.1 + cluster-logging v6.5.1
+   (their `maxOpenShiftVersion: 4.22` will hard-block the 4.23 upgrade),
+   cluster-observability-operator, kernel-module-management,
+   **kubevirt-hyperconverged v4.21.8 (CNV — still on the 4.21 channel on a
+   4.22 cluster; bump its Subscription channel or remove it)**, nmstate, and
+   a `redhat-ods-operator` namespace. Decide: adopt into Git or uninstall.
+7. **Expected-degraded (no action until GPU operator is enabled):** llama-cpp,
+   comfyui, swarmui, open-webui (mcpo), llmfit — no NVIDIA stack yet; and the
+   `local-path` PVCs shown Pending are just WaitForFirstConsumer waiting on
+   their (blocked) consumer pods, not a provisioner failure.
+
+### Pre-Talos-nuke checklist (operator intent 2026-06-11: nuke Talos, rebuild as SNO)
+
+Before destroying the Talos cluster:
+
+1. **`registry.vanillax.me`** — the LAN registry (and the `vanillax.me`
+   DNS/ingress serving it) lives behind Talos. Mirror or rebuild it somewhere
+   that survives (TrueNAS app, the SNO itself, …) and fix DNS so the SNO node
+   can resolve+pull, or every LAN-registry image on the SNO is permanently
+   unpullable.
+2. **Renovate** — the bot now runs ONLY on Talos (the SNO overlay suspends
+   it, `clusters/openshift/apps/development/renovate/patches/`). After the
+   nuke, drop the `suspend: true` patch op so the SNO instance takes over.
+3. **Get SNO storage + ingress green first** (items 2 and 3 above) so the SNO
+   is a functioning daily driver before its sibling disappears.
+4. **What survives without Talos:** RustFS S3 + TrueNAS shares are on
+   `192.168.10.133` (independent box) — Talos Kopia/Barman backup data
+   remains readable. 1Password Connect is per-cluster (SNO has its own).
+   Argo CD pulls from GitHub, not Talos.
+5. **What dies with Talos:** every `*.vanillax.me` service (llama-cpp
+   backend for any tool pointed at it, gitea if it hosts repos/the registry,
+   monitoring). Inventory anything external (Firewalla DNS entries, phones,
+   bookmarks, n8n/Home-Assistant webhooks) pointing at `vanillax.me`.
+6. **CNPG lineage rule still applies** if databases are ever restored onto
+   the SNO: never reuse a Talos `serverName`/S3 prefix (`cnpg/<db>` is Talos;
+   the SNO uses `cnpg-sno/<db>` and `<db>-database-sno-v1`).
+
+## June 9, 2026 — reformat to 4.21 GA planned; LVMS staged for the second SSD (SUPERSEDED by June 10–11: inline upgrade happened instead)
 
 Operator decisions (this date):
 

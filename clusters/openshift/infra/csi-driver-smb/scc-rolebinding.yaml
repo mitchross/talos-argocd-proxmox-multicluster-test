@@ -1,0 +1,21 @@
+# The upstream csi-driver-smb chart does not create OpenShift SCCs. Both the
+# controller and the node DaemonSet use hostNetwork + hostPath and the node
+# plugin mounts with privileged/SYS_ADMIN, so restricted-v2 rejects every pod
+# (FailedCreate on the ReplicaSet/DaemonSet — the namespace looks "Synced" in
+# Argo while zero pods exist, smb.csi.k8s.io never registers, and dynamic SMB
+# PVCs stay Pending on "waiting for external provisioner").
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: csi-smb-privileged
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:privileged
+subjects:
+  - kind: ServiceAccount
+    name: csi-smb-controller-sa
+    namespace: csi-driver-smb
+  - kind: ServiceAccount
+    name: csi-smb-node-sa
+    namespace: csi-driver-smb

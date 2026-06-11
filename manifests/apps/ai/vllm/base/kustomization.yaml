@@ -1,0 +1,23 @@
+# ============================================================
+# STAGED — NOT DEPLOYED (enable after the 2950X bare-metal move)
+#
+# vLLM is the flagship GPU workload for the SNO's target hardware
+# (Threadripper 2950X + 2x RTX 3090, TP=2). Until that box exists
+# the cluster has no nvidia.com/gpu capacity and the server can
+# never schedule, so only the namespace deploys (same staging idiom
+# as development/dvwa).
+#
+# To enable: uncomment pvc/deployment/service below, then the
+# httproute + patches lines in each cluster overlay.
+# Full checklist: ../README.md
+# ============================================================
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: vllm
+
+resources:
+  - namespace.yaml
+  # - pvc.yaml
+  # - deployment.yaml
+  # - service.yaml

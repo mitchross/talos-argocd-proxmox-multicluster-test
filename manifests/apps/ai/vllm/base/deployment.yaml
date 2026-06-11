@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-server
+  namespace: vllm
+  labels:
+    app: vllm-server
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-server
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      labels:
+        app: vllm-server
+    spec:
+      restartPolicy: Always
+      runtimeClassName: nvidia
+      priorityClassName: gpu-workload-high
+      terminationGracePeriodSeconds: 120
+      tolerations:
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+      securityContext:
+        fsGroup: 10001
+        fsGroupChangePolicy: "OnRootMismatch"
+      containers:
+        - name: vllm-server
+          image: vllm/vllm-openai:v0.22.1@sha256:953d3a06d5e64ab582985cd7401289d3abf2a2c14ef2158e9a84313daeec77d7
+          imagePullPolicy: IfNotPresent
+          # Explicit `vllm serve` so the spec is independent of the image's
+          # ENTRYPOINT (which has changed shape across vllm-openai releases).
+          command: ["vllm", "serve"]
+          args:
+            - "Qwen/Qwen3-32B-AWQ" # ~19GB AWQ weights; with TP=2 across 2x3090 (48GB) leaves ~24GB headroom for KV cache
+            - "--served-model-name"
+            - "qwen3-32b"
+            - "--tensor-parallel-size"
+            - "2"                  # one shard per 3090. Single-card fallback: set to 1 AND swap to a <=20GB model (e.g. Qwen3-14B-AWQ)
+            - "--max-model-len"
+            - "32768"
+            - "--gpu-memory-utilization"
+            - "0.90"
+            - "--host"
+            - "0.0.0.0"
+            - "--port"
+            - "8000"
+          env:
+            # GPU selection is handled by the device plugin + CDI — the plugin
+            # mounts exactly the allocated cards. Do NOT set
+            # NVIDIA_VISIBLE_DEVICES or CUDA_VISIBLE_DEVICES; either one
+            # overrides the plugin's injection (same rule as llama-cpp).
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "compute,utility"
+            - name: HF_HOME
+              value: "/cache/hf"
+            # If TP=2 hangs at NCCL init on the 2950X (X399 PCIe P2P/IOMMU
+            # quirk on first-gen Threadripper; no NVLink on this rig),
+            # uncomment to force NCCL onto shared-memory/host transport:
+            # - name: NCCL_P2P_DISABLE
+            #   value: "1"
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 360 # cold start downloads ~19GB then loads + CUDA-graphs both cards; allow ~1h
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: "16"
+              memory: 64Gi
+              nvidia.com/gpu: "2"
+              ephemeral-storage: "30Gi"
+            requests:
+              cpu: "4"
+              memory: 24Gi
+              nvidia.com/gpu: "2"
+              ephemeral-storage: "10Gi"
+          volumeMounts:
+            - name: hf-cache
+              mountPath: /cache
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: hf-cache
+          persistentVolumeClaim:
+            claimName: vllm-hf-cache
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Gi # NCCL cross-rank buffers for TP=2 live in /dev/shm
+      nodeSelector:
+        feature.node.kubernetes.io/pci-0300_10de.present: "true"

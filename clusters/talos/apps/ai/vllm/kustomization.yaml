@@ -1,0 +1,10 @@
+# Parity overlay only (1:1 contract: every shared base has an overlay in
+# every cluster). Do NOT enable vLLM on Talos: the dual 3090s move from the
+# Talos GPU worker to the 2950X SNO as part of the 2026-06-10 hardware
+# decision — see docs/domains/multicluster/handoff-notes.md.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: vllm
+resources:
+- "../../../../../manifests/apps/ai/vllm/base"
+# - httproute.yaml

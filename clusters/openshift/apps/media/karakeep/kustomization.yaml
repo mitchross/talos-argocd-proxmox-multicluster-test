@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: karakeep
 resources:
 - "../../../../../manifests/apps/media/karakeep/base"
+- scc-rolebinding.yaml
 - karakeep/httproute.yaml
 patches:
 - path: patches/deployment-karakeep-meilisearch.jsonpatch.yaml

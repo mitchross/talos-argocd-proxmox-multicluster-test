@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: posthog
 resources:
 - "../../../../../manifests/apps/development/posthog/base"
+- scc-rolebinding.yaml
 - httproute.yaml
 patches:
 - path: patches/deployment-kafka.jsonpatch.yaml

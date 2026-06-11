@@ -1,0 +1,18 @@
+# STAGED with the shared base (namespace-only until the 2950X GPU box
+# exists). Enable checklist: manifests/apps/ai/vllm/README.md — uncomment
+# the base resources there, then httproute.yaml + the patches block here.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: vllm
+resources:
+- "../../../../../manifests/apps/ai/vllm/base"
+# - httproute.yaml
+# patches:
+# - path: patches/deployment-vllm-server.jsonpatch.yaml
+#   target:
+#     version: v1
+#     kind: Deployment
+#     name: vllm-server
+#     group: apps
+#     namespace: vllm
+# - path: patches/remove-talos-backup-persistentvolumeclaim-vllm-hf-cache.yaml

@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: n8n
 resources:
 - "../../../../../manifests/apps/home/n8n/base"
+- scc-rolebinding.yaml
 - httproute.yaml
 patches:
 - path: patches/deployment-n8n.jsonpatch.yaml

@@ -3,4 +3,5 @@ kind: Kustomization
 namespace: stirling-pdf
 resources:
 - "../../../../../manifests/apps/utility/stirling-pdf/base"
+- scc-rolebinding.yaml
 - httproute.yaml

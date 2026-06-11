@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: paperless-ngx
 resources:
 - "../../../../../manifests/apps/home/paperless-ngx/base"
+- scc-rolebinding.yaml
 - httproute.yaml
 patches:
 - path: patches/remove-talos-backup-namespace-paperless-ngx.yaml

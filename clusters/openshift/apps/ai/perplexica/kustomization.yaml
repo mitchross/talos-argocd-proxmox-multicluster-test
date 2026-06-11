@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: perplexica
 resources:
 - "../../../../../manifests/apps/ai/perplexica/base"
+- scc-rolebinding.yaml
 - httproute.yaml
 patches:
 - path: patches/remove-talos-backup-namespace-perplexica.yaml

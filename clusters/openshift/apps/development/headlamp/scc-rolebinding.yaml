@@ -1,0 +1,17 @@
+# The headlamp chart sets a fixed non-root UID (and runAsNonRoot with a
+# non-numeric image user, so the UID MUST stay — see kustomization note).
+# restricted-v2 rejects fixed UIDs outside the namespace range; nonroot-v2
+# allows any explicit non-root UID. Same pattern as cert-manager.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: headlamp-nonroot-v2
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:nonroot-v2
+subjects:
+  - kind: ServiceAccount
+    name: headlamp-admin
+    namespace: kube-system

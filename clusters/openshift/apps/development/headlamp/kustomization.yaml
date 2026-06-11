@@ -3,12 +3,10 @@ kind: Kustomization
 namespace: kube-system
 resources:
 - "../../../../../manifests/apps/development/headlamp/base"
+- scc-rolebinding.yaml
 - httproute.yaml
-patches:
-- path: patches/deployment-headlamp.jsonpatch.yaml
-  target:
-    version: v1
-    kind: Deployment
-    name: headlamp
-    group: apps
-    namespace: kube-system
+# NOTE: deliberately NO runAsUser/runAsGroup removal patch here (the standard
+# OpenShift port pattern). The chart also sets runAsNonRoot and the headlamp
+# image user is non-numeric, so stripping the UID makes the kubelet reject the
+# container outright ("cannot verify user is non-root") — the chart's fixed
+# UID must stay, admitted via the nonroot-v2 SCC in scc-rolebinding.yaml.

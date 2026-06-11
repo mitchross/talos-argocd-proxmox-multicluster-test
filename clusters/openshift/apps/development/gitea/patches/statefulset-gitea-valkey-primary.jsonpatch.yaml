@@ -6,3 +6,9 @@
   path: "/spec/template/spec/containers/0/securityContext/runAsUser"
 - op: remove
   path: "/spec/template/spec/containers/0/securityContext/runAsGroup"
+# The bitnami common chart renders a literal empty seLinuxOptions: {} when
+# global.compatibility.omitEmptySeLinuxOptions is unset; every SCC's
+# MustRunAs strategy rejects the empty level ("must be s0:cNN,cNN"), so the
+# StatefulSet was FailedCreate-forbidden since bootstrap (verified 2026-06-11).
+- op: remove
+  path: "/spec/template/spec/containers/0/securityContext/seLinuxOptions"

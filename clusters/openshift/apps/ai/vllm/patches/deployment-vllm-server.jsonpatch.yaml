@@ -1,0 +1,4 @@
+# restricted-v2 assigns the namespace-range fsGroup; pinning 10001 from the
+# shared base is rejected on OpenShift (same patch as llama-cpp).
+- op: remove
+  path: "/spec/template/spec/securityContext/fsGroup"

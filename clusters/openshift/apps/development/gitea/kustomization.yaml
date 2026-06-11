@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: gitea
 resources:
 - "../../../../../manifests/apps/development/gitea/base"
+- scc-rolebinding.yaml
 - httproute.yaml
 patches:
 - path: patches/deployment-gitea.jsonpatch.yaml

@@ -3,4 +3,5 @@ kind: Kustomization
 namespace: excalidraw
 resources:
 - "../../../../../manifests/apps/utility/excalidraw/base"
+- scc-rolebinding.yaml
 - httproute.yaml

@@ -1,6 +1,13 @@
+# initContainers/0 is fix-permissions (chown -R /data as root). Its
+# runAsUser: 0 must STAY (a chown as a random UID can never work) and its
+# explicit capabilities.add must GO: no grantable SCC short of privileged
+# allows added caps, while root's default CRI-O capability set already
+# includes CHOWN/FOWNER/DAC_OVERRIDE. Admitted via the anyuid SCC grant in
+# scc-rolebinding.yaml (verified live 2026-06-11 — the ReplicaSet was
+# FailedCreate-forbidden since bootstrap).
 - op: remove
   path: "/spec/template/spec/securityContext/fsGroup"
 - op: remove
-  path: "/spec/template/spec/initContainers/0/securityContext/runAsUser"
+  path: "/spec/template/spec/initContainers/0/securityContext/capabilities/add"
 - op: remove
   path: "/spec/template/spec/initContainers/3/securityContext/runAsUser"

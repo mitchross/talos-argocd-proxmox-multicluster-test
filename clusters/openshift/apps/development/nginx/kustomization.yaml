@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: nginx-example
 resources:
 - "../../../../../manifests/apps/development/nginx/base"
+- scc-rolebinding.yaml
 - httproute.yaml
 patches:
 - path: patches/remove-talos-backup-namespace-nginx-example.yaml

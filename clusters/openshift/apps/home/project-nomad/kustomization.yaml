@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: project-nomad
 resources:
 - "../../../../../manifests/apps/home/project-nomad/base"
+- scc-rolebinding.yaml
 - cyberchef/httproute.yaml
 - flatnotes/httproute.yaml
 - kiwix/httproute.yaml

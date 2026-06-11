@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: fizzy
 resources:
 - "../../../../../manifests/apps/utility/fizzy/base"
+- scc-rolebinding.yaml
 - httproute.yaml
 patches:
 - path: patches/deployment-fizzy.jsonpatch.yaml

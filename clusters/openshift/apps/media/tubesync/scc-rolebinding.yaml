@@ -1,0 +1,17 @@
+# This image needs its designed in-image user (root or a fixed UID) and
+# crashes under restricted-v2's random UID — verified live 2026-06-11
+# (SCC crash campaign, see docs/domains/multicluster/handoff-notes.md).
+# anyuid runs the pod as the image default, matching Talos behavior.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tubesync-anyuid
+  namespace: tubesync
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:anyuid
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: tubesync

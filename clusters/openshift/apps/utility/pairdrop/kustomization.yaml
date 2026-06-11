@@ -3,4 +3,5 @@ kind: Kustomization
 namespace: pairdrop
 resources:
 - "../../../../../manifests/apps/utility/pairdrop/base"
+- scc-rolebinding.yaml
 - httproute.yaml

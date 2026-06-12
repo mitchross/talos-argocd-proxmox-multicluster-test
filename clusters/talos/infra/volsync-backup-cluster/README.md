@@ -1,6 +1,6 @@
 # Cluster-scoped pieces — operator-free VolSync safety interlock
 
-ArgoCD-managed under `clusters/talos/argocd/core-dependencies/volsync-backup-cluster-app.yaml`
+ArgoCD-managed under `infrastructure/controllers/argocd/apps/core-dependencies/volsync-backup-cluster-app.yaml`
 at sync wave 2 (same as pvc-plumber — both coexist safely during the
 full migration off pvc-plumber; the MAP targets Jobs while pvc-plumber
 webhooks target PVCs, no admission conflict).

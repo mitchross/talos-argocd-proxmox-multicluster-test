@@ -4,26 +4,26 @@ metadata:
   name: convertx-route
   namespace: convertx
   labels:
-    external-dns: 'true'
+    external-dns: "true"
   annotations:
-    external-dns.alpha.kubernetes.io/target: vanillax.me
+    external-dns.alpha.kubernetes.io/target: "vanillax.me"
 spec:
   parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: Gateway
-    name: gateway-external
-    namespace: gateway
-    sectionName: https
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-external
+      namespace: gateway
+      sectionName: https
   hostnames:
-  - convertx.vanillax.me
+    - "convertx.vanillax.me"
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: "/"
-    backendRefs:
-    - group: ''
-      kind: Service
-      name: convertx
-      port: 3000
-      weight: 1
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: convertx
+          port: 3000
+          weight: 1

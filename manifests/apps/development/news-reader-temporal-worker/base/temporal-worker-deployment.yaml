@@ -1,5 +1,5 @@
 # WorkerDeployment — Temporal Worker Controller CRD
-# (manifests/infra/temporal-worker-controller/). Replaces the
+# (infrastructure/controllers/temporal-worker-controller/). Replaces the
 # classic `apps/v1 Deployment` with a CR that automates Temporal Worker
 # Versioning for safe blue/green rollouts of workflow worker code.
 #

@@ -4,20 +4,21 @@ metadata:
   name: frigate
 spec:
   parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: Gateway
-    name: gateway-internal
-    namespace: gateway
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-internal
+      namespace: gateway
   hostnames:
-  - frigate.vanillax.me
+  - "frigate.vanillax.me"
   rules:
   - matches:
     - path:
-        type: PathPrefix
-        value: "/"
+        type: PathPrefix 
+        value: /
     backendRefs:
-    - group: ''
-      kind: Service
-      name: frigate-http
-      port: 5000
-      weight: 1
+        - group: ""
+          kind: Service
+          name: frigate-http
+          port: 5000
+          weight: 1
+

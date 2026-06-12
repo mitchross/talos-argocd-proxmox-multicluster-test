@@ -130,7 +130,7 @@ OpenShift optional path:
 
 OpenShift storage policy:
 
-- Use `vanillax-local-rwo` for ordinary local PVCs: Longhorn on Talos, **TrueNAS iSCSI via democratic-csi** on OpenShift.
+- Use `vanillax-local-rwo` for ordinary local PVCs: Longhorn (V1 engine) on Talos, **TrueNAS iSCSI via the official truenas-csi driver** on OpenShift.
 - For data that should stay node-local with no NAS dependency, use the non-default `local-path` class; for ephemeral/scratch use `emptyDir` (or `emptyDir{medium: Memory}`).
 - Use the shared NFS and SMB CSI bases (or the dynamic `truenas-nfs-csi` class) for external shares and RWX datasets.
 - All apps have OpenShift overlays for catalog-level testing, but large stateful apps still need explicit capacity, SCC, external-storage, and backup review before being considered production-ready.

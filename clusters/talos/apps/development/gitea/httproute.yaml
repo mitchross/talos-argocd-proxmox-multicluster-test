@@ -10,14 +10,14 @@ spec:
     name: gateway-internal
     namespace: gateway
   hostnames:
-  - gitea.vanillax.me
+  - "gitea.vanillax.me"
   rules:
   - matches:
     - path:
         type: PathPrefix
-        value: "/"
+        value: /
     backendRefs:
-    - group: ''
+    - group: ""
       kind: Service
       name: gitea-http
       port: 3000

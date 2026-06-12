@@ -119,11 +119,11 @@ Normally ArgoCD applies this automatically (directory = Application).
 Manual apply (dev / emergency):
 
 ```bash
-kubectl apply -k manifests/apps/ai/comfyui/
+kubectl apply -k my-apps/ai/comfyui/
 ```
 
 The GPU-node prereqs (extensions, device plugin, runtime class) are
-managed by `manifests/infra/nvidia-gpu-operator/` — don't
+managed by `infrastructure/controllers/nvidia-gpu-operator/` — don't
 re-apply them from here.
 
 ## Interactions with other apps
@@ -134,7 +134,7 @@ re-apply them from here.
   SIGTERM during an LLM burst, that's why — it's intentional.
 - **Open WebUI** uses ComfyUI for image generation:
   `COMFYUI_BASE_URL=http://comfyui-service.comfyui.svc.cluster.local:8188`.
-  See `manifests/apps/ai/open-webui/configmap.yaml`.
+  See `my-apps/ai/open-webui/configmap.yaml`.
 
 ## Gotchas
 

@@ -3,7 +3,7 @@
 # Sources:
 #   - Loki   (logs)    — uses OTEL labels: k8s_namespace_name, k8s_container_name
 #   - Prometheus (metrics) — scraped from tile-server's /api/metrics via
-#     manifests/apps/development/radar-ng/servicemonitor.yaml
+#     my-apps/development/radar-ng/servicemonitor.yaml
 #
 # The dashboard is auto-imported via the `grafana_dashboard: "1"` label.
 apiVersion: v1

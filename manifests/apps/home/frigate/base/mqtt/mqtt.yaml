@@ -20,6 +20,7 @@ spec:
     requests:
       storage: 5Gi
   storageClassName: vanillax-local-rwo
+
 ---
 apiVersion: apps/v1
 kind: Deployment

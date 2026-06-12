@@ -2,7 +2,7 @@
 
 SwarmUI ([mcmonkeyprojects/SwarmUI](https://github.com/mcmonkeyprojects/SwarmUI))
 is a .NET frontend/orchestrator over ComfyUI. It **replaces the standalone
-`comfyui` app** in this cluster: `manifests/apps/ai/comfyui` is scaled to
+`comfyui` app** in this cluster: `my-apps/ai/comfyui` is scaled to
 `replicas: 0` and SwarmUI self-starts its own managed ComfyUI on **GPU 1**.
 
 ## Why this shape
@@ -18,7 +18,7 @@ is a .NET frontend/orchestrator over ComfyUI. It **replaces the standalone
   (`192.168.10.133:/mnt/ai-pool/comfyui`), mounted at `/comfyui-models`.
 - **Storage.** `Data` + `Output` are Longhorn with explicit inline
   VolSync `ReplicationSource`/`ReplicationDestination` + static
-  `dataSourceRef` in `pvc.yaml` (see `manifests/apps/CLAUDE.md`). `dlbackend`
+  `dataSourceRef` in `pvc.yaml` (see `my-apps/CLAUDE.md`). `dlbackend`
   (SwarmUI's auto-installed ComfyUI + torch venv) is Longhorn with **no**
   backup wiring because it is fully reinstallable.
 
@@ -52,5 +52,5 @@ scratch, delete the `swarmui-data` (and `swarmui-dlbackend`) PVCs.
 
 ## Reverting to standalone ComfyUI
 
-Set `manifests/apps/ai/comfyui/deployment.yaml` back to `replicas: 1` and scale
+Set `my-apps/ai/comfyui/deployment.yaml` back to `replicas: 1` and scale
 SwarmUI down (`replicas: 0`). They cannot both run — only one whole GPU.

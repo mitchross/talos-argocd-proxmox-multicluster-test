@@ -13,9 +13,10 @@ talos:
   # --enable-talos-pre-release-versions flag is no longer required for
   # Talos itself now that we're on GA; leave it in place on the Omni
   # server if you still need it for other pre-release components.
-  # v1.13.2 (2026-05-12): patch on the 1.13 GA line — no breaking changes,
-  # K8s stays v1.36.0 (etcd 3.6.11, kernel 6.18.29).
-  version: v1.13.2
+  # v1.13.4 (2026-06-09): current stable patch on the 1.13 GA line.
+  # Includes the 1.13.3 containerd 2.2.4 and mount-propagation fixes, plus
+  # corrected kube-scheduler integer marshaling. Kubernetes stays v1.36.1.
+  version: v1.13.4
 patches:
 - name: disable-default-cni
   inline:
@@ -145,6 +146,17 @@ patches:
           - bind
           - rshared
           - rw
+# REMOVED 2026-06-12: longhorn-v2-prereqs (hugepages + vfio_pci/nvme_tcp) and
+# longhorn-v2-default-disk (raw /dev/sdb block registration). The V2/SPDK
+# engine failed under full-DR restore load — open Longhorn 1.12 bugs #13315
+# (interrupted rebuild poisons replica metadata) and #13314 (re-crash after
+# auto-reattach) turned a mass restore into an unrecoverable fault loop
+# (2026-06-12 incident; see the attack-storm playbook in README.md). The
+# cluster returned to the V1 engine: data lives as files under
+# /var/lib/longhorn (bind-mounted from /var/local/longhorn by the
+# longhorn-storage patch above) on the single 800G disk — the exact layout
+# that ran this cluster stably before the V2 experiment. Reclaims the 2 GiB
+# hugepage carve-out per worker as bonus RAM.
 ---
 kind: Workers
 name: gpu-workers
@@ -166,11 +178,15 @@ patches:
       nodeLabels:
         gpu-worker: "true"
         nvidia.com/gpu: "true"
-- name: gpu-network-dhcp
-  inline:
-    apiVersion: v1alpha1
-    kind: DHCPv4Config
-    name: ens18
+# REMOVED 2026-06-11: the gpu-network-dhcp DHCPv4Config pinned to "ens18"
+# broke the GPU worker on the V2 rebuild — adding the second disk
+# (additional_disks -> extra virtio-scsi controller) shifted PCIe
+# enumeration, the NIC stopped being ens18, the pinned config matched
+# nothing, and the node booted with NO IP (SideroLink down, unreachable —
+# unfixable remotely, required reprovision). Regular workers use Talos's
+# default DHCP-on-all-links and survive hardware reshuffles; the kubelet
+# nodeIP.validSubnets pin in patches/gpu-worker.yaml handles address
+# selection. Do not re-pin DHCP to an interface name.
 - file: patches/gpu-worker.yaml
 - name: kubelet-performance
   inline:
@@ -190,3 +206,8 @@ patches:
           - bind
           - rshared
           - rw
+# REMOVED 2026-06-12: longhorn-v2-prereqs + longhorn-v2-default-disk (see the
+# workers section above for the full rationale — V2 engine retired after the
+# full-DR fault loop; V1 layout restored). GPU-node bonus: the 2 GiB hugepage
+# carve-out returns to AI workloads, and vfio_pci no longer loads alongside
+# the NVIDIA driver.

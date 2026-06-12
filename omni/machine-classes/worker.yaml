@@ -44,6 +44,14 @@ spec:
       # existing VMs already have provisioned — no risky downsize during
       # the cores-bump.
       memory: 98304
+      # Single 800G disk — V1 (pre-V2-experiment) layout restored 2026-06-12.
+      # The V2 rebuild split this into 96G OS + 704G raw block device for SPDK;
+      # the V2 engine failed under full-DR load (open Longhorn bugs #13315/
+      # #13314: interrupted rebuilds poison replica metadata) and the cluster
+      # returned to the V1 engine, which stores data as files on the Talos
+      # EPHEMERAL partition (/var/local/longhorn bind-mounted to
+      # /var/lib/longhorn by the cluster template). One disk = Talos system +
+      # images + pod ephemeral + Longhorn data, exactly as it ran pre-V2.
       disk_size: 800
       network_bridge: vmbr1
       storage_selector: name == "ssdpool"
@@ -57,4 +65,5 @@ spec:
       cpu_type: host
       machine_type: q35
       balloon: false
-      # Storage via 10G switch (192.168.10.133) - no dedicated NIC needed
+      # Single fiber uplink on the DL360 Gen9 host — LAN + storage traffic
+      # (NFS/RustFS at 192.168.10.133) share it; no dedicated storage NIC/link.

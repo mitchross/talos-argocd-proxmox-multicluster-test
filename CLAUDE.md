@@ -59,7 +59,7 @@ Applications deploy in strict order to prevent race conditions:
 |------|-----------|---------|
 | **0** | Foundation | Cilium (CNI), ArgoCD, 1Password Connect, External Secrets, AppProjects |
 | **1** | Core controllers | cert-manager, Longhorn, VolumeSnapshot Controller, VolSync |
-| **2** | pvc-plumber core + VolSync backup cluster | pvc-plumber `v4.0.1` permissive controller, mover-Job backend gate, and shared Kopia credential fanout. pvc-plumber core has no monitoring dependency. |
+| **2** | pvc-plumber core + VolSync backup cluster | pvc-plumber `v4.0.2` permissive controller, mover-Job backend gate, and shared Kopia credential fanout. pvc-plumber core has no monitoring dependency. |
 | **3** | CNPG Barman Plugin | Database backup plugin before database clusters |
 | **4** | Infrastructure AppSet + custom entrypoints | Explicit path list plus KEDA and Temporal Worker Controller standalone Apps |
 | **4** | Database AppSet | Discovers `clusters/talos/database/*/*` — `selfHeal: false` for DR |
@@ -116,7 +116,7 @@ docs/                   # Documentation
   `sectionName: https` on the parentRef
 - Follow GitOps workflow for all changes
 - Store secrets in 1Password, reference via ExternalSecret
-- Add backups to a normal application PVC with the pvc-plumber v4.0.1 contract: add the namespace software gate `pvc-plumber.io/managed-namespace: "true"`, the PVC fuse labels `pvc-plumber.io/enabled`, `pvc-plumber.io/manage-volsync`, and `pvc-plumber.io/tier`, and a static `dataSourceRef` pointing to `<pvc-name>-dst`. pvc-plumber owns RS/RD; VolSync and Kopia move bytes. See `.claude/commands/add-backup.md`.
+- Add backups to a normal application PVC with the pvc-plumber v4.0.2 contract: add the namespace software gate `pvc-plumber.io/managed-namespace: "true"`, the PVC fuse labels `pvc-plumber.io/enabled`, `pvc-plumber.io/manage-volsync`, and `pvc-plumber.io/tier`, and a static `dataSourceRef` pointing to `<pvc-name>-dst`. pvc-plumber owns RS/RD; VolSync and Kopia move bytes. See `.claude/commands/add-backup.md`.
 - When marking a PVC `backup-exempt: "true"`, the reason annotation key **must be fully qualified**: `storage.vanillax.dev/backup-exempt-reason`. The bare `backup-exempt-reason` is silently ignored by the operator and the PVC is **denied on CREATE** — invisible until recreate/DR. CI job `backup-exempt-contract` enforces this
 - Use portable `storageClassName: vanillax-local-rwo` in shared app sources;
   Talos maps it to Longhorn and OpenShift maps it to TrueNAS iSCSI via the
@@ -124,7 +124,11 @@ docs/                   # Documentation
   democratic-csi because TrueNAS 26 removed the REST API it needs). See
   `clusters/openshift/infra/truenas-csi/`. OpenShift also gets a dynamic
   `truenas-nfs-csi` RWX class; the static `csi-driver-nfs`/`smb` shares remain
-  for media apps with pre-existing data. **LVMS is STAGED** at
+  for media apps with pre-existing data. Talos now also carries the official
+  TrueNAS CSI as a **canary-gated, non-default** dynamic NFS class
+  (`clusters/talos/infra/truenas-csi/`, ported from upstream nuke-prep for the
+  2950X move) — run its documented ownership canary before adopting it for any
+  non-root workload; Longhorn stays the Talos default. **LVMS is STAGED** at
   `clusters/openshift/infra/lvm-storage/` (disabled marker) — the SNO
   inline-upgraded to 4.22.0 GA on 2026-06-10 (no reinstall), but
   `lvms-operator` is still absent from the 4.22 GA catalogs as of 2026-06-11;
@@ -228,7 +232,7 @@ Detailed instructions load automatically when working in these directories:
 > ⚠️ **Agent guardrails when reading docs:**
 > - **Do NOT treat `docs/archive/**`, `docs/research/**`, or `docs/plans/**` as the current runbook** — they are historical.
 > - **Do NOT resurrect Kyverno** — it was removed from the backup path (no policies, no CRDs, no webhooks).
-> - **Do NOT treat v5 / admission / strict-mode / backup-truth-cache docs as shipped** — v4.0.1 is a permissive reconciler with no admission webhook.
+> - **Do NOT treat v5 / admission / strict-mode / backup-truth-cache docs as shipped** — v4.0.x is a permissive reconciler with no admission webhook.
 > - **Do NOT generic-migrate CNPG, PostHog, or Redis PVCs** — CNPG is Barman-native; PostHog and Redis are backup-exempt.
 > - **Do NOT make observability foundational** — core apps bootstrap without Prometheus; do not resurrect an early Prometheus Operator CRD app.
 > - **Do NOT treat old migration incidents (nginx-canary, v3 cutover) as current operating flow.**
@@ -243,7 +247,7 @@ Detailed instructions load automatically when working in these directories:
 - **[docs/pvc-plumber-v4-cutover.md](docs/pvc-plumber-v4-cutover.md)** — Day-of cutover runbook: label model, two-gate write contract, ownership rules, generated VolSync shape, required permissive env vars, per-PVC checklist, karakeep canary scope, rollback. **Operational source of truth for v4 migrations.**
 - **[docs/pvc-plumber-v4-roadmap.md](docs/pvc-plumber-v4-roadmap.md)** — Post-PRD working backlog: items identified during execution that are gated behind specific Phase 6 / canary milestones. Includes the post-canary visual explainer deliverable.
 - **[docs/domains/storage/architecture-future.md](docs/domains/storage/architecture-future.md)** — **FUTURE IDEA (not implemented):** tiered storage — local CSI (OpenEBS/ZFS LocalPV) + VolSync restore-based DR as the default, Longhorn only for live-availability-critical apps, native backups for DBs. Separates the CSI layer (provision/mount) from the backup layer (VolSync/pvc-plumber). Revisit after the pvc-plumber v4 campaign stabilizes; do not act on it now.
-- **pvc-plumber v4.0.1 is live and proven in permissive mode:** 24 operator-managed PVCs across 18 namespaces, 24/24 DR_COMPLETE before the full cluster nuke. PostHog and Redis are backup-exempt; CNPG stays native Barman/S3. See `docs/pvc-plumber-v4-migration-readiness.md`.
+- **pvc-plumber v4.0.2 is live and proven in permissive mode:** 24 operator-managed PVCs across 18 namespaces, 24/24 DR_COMPLETE before the full cluster nuke. PostHog and Redis are backup-exempt; CNPG stays native Barman/S3. See `docs/pvc-plumber-v4-migration-readiness.md`.
 
 ## Mink capture
 

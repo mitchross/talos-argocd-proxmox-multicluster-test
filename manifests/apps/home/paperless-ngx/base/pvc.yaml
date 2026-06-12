@@ -106,6 +106,7 @@ spec:
     requests:
       storage: 10Gi
   storageClassName: vanillax-local-rwo
+
 # NOTE: inline ReplicationSource/ReplicationDestination for data (data-dst) and
 # media (media-dst) were REMOVED 2026-05-31 (pvc-plumber v4.0.1 DRY handoff).
 # pvc-plumber now owns the RS/RD lifecycle for both (tier=hourly, mover 568).

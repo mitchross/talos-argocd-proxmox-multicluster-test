@@ -10,14 +10,14 @@ spec:
     name: gateway-internal
     namespace: gateway
   hostnames:
-  - pairdrop.vanillax.me
+  - "pairdrop.vanillax.me"
   rules:
   - matches:
     - path:
         type: PathPrefix
-        value: "/"
+        value: /
     backendRefs:
-    - group: ''
+    - group: ""
       kind: Service
       name: pairdrop
       port: 3000

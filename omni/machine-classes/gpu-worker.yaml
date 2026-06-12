@@ -34,6 +34,13 @@ spec:
       # leaves >4x headroom over current peak for model loads. CPU and
       # GPU passthrough configuration unchanged in Phase 1.
       memory: 131072
+      # Single 800G disk — V1 layout restored 2026-06-12 (see worker.yaml for the
+      # full story: V2/SPDK failed under full-DR load, returned to V1 engine).
+      # Longhorn V1 data lives as files on the EPHEMERAL partition alongside
+      # Talos system + images + pod ephemeral. Generous sizing matters here:
+      # llama-cpp may legally use 50Gi ephemeral + 8Gi emptyDir (deployment
+      # limits), vLLM adds a 16Gi emptyDir, CUDA images run 5-20G each, and
+      # Longhorn replicas share the same partition. Models live on NFS.
       disk_size: 800
       network_bridge: vmbr1
       storage_selector: name == "ssdpool"
@@ -58,7 +65,8 @@ spec:
           pcie: true
         - mapping: nvidia-gpu-2
           pcie: true
-      # Storage via 10G switch (192.168.10.133) - no dedicated NIC needed
+      # Single fiber uplink on the DL360 Gen9 host — LAN + storage traffic
+      # (NFS/RustFS at 192.168.10.133) share it; no dedicated storage NIC/link.
 
 # GPU Passthrough Setup:
 # With enhanced provider, VM is pre-configured for GPU. Just:

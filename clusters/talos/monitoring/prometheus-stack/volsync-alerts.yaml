@@ -118,7 +118,7 @@ spec:
         # if they forget, the next delete/recreate of this PVC will silently
         # skip restore again. A Bound PVC carrying skip-restore for >24h is
         # a primed footgun. kube-state-metrics exposes the annotation via
-        # metricAnnotationsAllowList in manifests/monitoring/prometheus-stack/values.yaml.
+        # metricAnnotationsAllowList in monitoring/prometheus-stack/values.yaml.
         - alert: ProtectedPVCSkipRestoreStale
           expr: |
             (

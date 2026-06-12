@@ -15,9 +15,9 @@ spec:
   - matches:
     - path:
         type: PathPrefix
-        value: "/"
+        value: /
     backendRefs:
-    - group: ''
+    - group: ""
       kind: Service
       name: tubesync
       port: 4848

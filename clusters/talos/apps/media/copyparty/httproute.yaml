@@ -5,19 +5,19 @@ metadata:
   namespace: copyparty
 spec:
   parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: Gateway
-    name: gateway-internal
-    namespace: gateway
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-internal
+      namespace: gateway
   hostnames:
-  - copyparty.vanillax.me
+    - "copyparty.vanillax.me"
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: "/"
-    backendRefs:
-    - group: ''
-      kind: Service
-      name: copyparty
-      port: 3923
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: copyparty
+          port: 3923

@@ -66,7 +66,7 @@ curl localhost:9400/metrics | grep DCGM_FI_DEV
 ### Deploy Changes
 ```bash
 # Deploy monitoring stack with GPU monitoring
-kubectl apply -k clusters/talos/monitoring/prometheus-stack/
+kubectl apply -k monitoring/prometheus-stack/
 ```
 
 ### Troubleshooting
@@ -87,4 +87,4 @@ kubectl exec -n prometheus-stack deployment/kube-prometheus-stack-prometheus -- 
 - Metrics are collected every 15 seconds
 - Dashboard auto-refreshes every 30 seconds
 - Alerts are configured for typical GPU workload thresholds
-- Compatible with NVIDIA GPUs only
+- Compatible with NVIDIA GPUs only 

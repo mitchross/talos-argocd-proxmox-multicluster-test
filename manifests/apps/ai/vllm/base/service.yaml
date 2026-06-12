@@ -7,8 +7,8 @@ spec:
   selector:
     app: vllm-server
   ports:
-  - name: http
-    protocol: TCP
-    port: 8000
-    targetPort: http
+    - name: http              # CRITICAL — HTTPRoute matches by port name; fails silently without it
+      protocol: TCP
+      port: 8080              # cluster-facing port (matches the llama-cpp convention)
+      targetPort: http        # → container port 8000
   type: ClusterIP

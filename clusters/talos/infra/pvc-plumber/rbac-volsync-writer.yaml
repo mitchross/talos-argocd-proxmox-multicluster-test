@@ -40,7 +40,7 @@
 #
 # Managed namespaces today carry the pvc-plumber.io/managed-namespace label
 # on their own namespace.yaml manifests: nginx-example, homepage-dashboard,
-# karakeep. Preflight + cutover contract: docs/pvc-plumber-v4-cutover.md.
+# karakeep. Preflight + cutover contract: git history (v4 cutover doc, pruned 2026-06-13).
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -54,7 +54,12 @@ metadata:
 rules:
   - apiGroups: ["volsync.backube"]
     resources: ["replicationsources", "replicationdestinations"]
-    verbs: ["get", "list", "watch", "create", "patch", "delete"]
+    # "update" is required by the v4.0.2 drift-repair path: the executor
+    # uses read-then-overwrite Update (not Patch) on owned RS/RD. The
+    # verb was missing until the 2026-06-10 drift drill — the update op
+    # had never fired in production before v4.0.2, so the RBAC denial was
+    # invisible (/audit showed would-update with exec Failed: forbidden).
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
 ---
 # Single cluster-wide binding (DRY). Replaces the former per-namespace

@@ -4,29 +4,31 @@ metadata:
   name: redlib-route
   namespace: redlib
   labels:
-    external-dns: 'true'
+    external-dns: "true"  # Enable ExternalDNS for this route
   annotations:
-    external-dns.alpha.kubernetes.io/target: vanillax.me
+    # ExternalDNS will create a CNAME record pointing to vanillax.me
+    # which then points to the Cloudflare Tunnel
+    external-dns.alpha.kubernetes.io/target: "vanillax.me"
 spec:
   parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: Gateway
-    name: gateway-external
-    namespace: gateway
-    sectionName: https
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-external
+      namespace: gateway
+      sectionName: https
   hostnames:
-  - redlib.vanillax.me
+    - "redlib.vanillax.me"
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: "/"
-    backendRefs:
-    - group: ''
-      kind: Service
-      name: redlib
-      port: 8080
-      weight: 1
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: redlib
+          port: 8080
+          weight: 1
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -34,25 +36,25 @@ metadata:
   name: libreddit-redirect
   namespace: redlib
   labels:
-    external-dns: 'true'
+    external-dns: "true"
   annotations:
-    external-dns.alpha.kubernetes.io/target: vanillax.me
+    external-dns.alpha.kubernetes.io/target: "vanillax.me"
 spec:
   parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: Gateway
-    name: gateway-external
-    namespace: gateway
-    sectionName: https
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-external
+      namespace: gateway
+      sectionName: https
   hostnames:
-  - libreddit.vanillax.me
+    - "libreddit.vanillax.me"
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: "/"
-    filters:
-    - type: RequestRedirect
-      requestRedirect:
-        hostname: redlib.vanillax.me
-        statusCode: 301
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            hostname: redlib.vanillax.me
+            statusCode: 301

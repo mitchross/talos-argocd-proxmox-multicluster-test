@@ -10,17 +10,17 @@ spec:
     name: gateway-internal
     namespace: gateway
   hostnames:
-  - llama.vanillax.me
+  - "llama.vanillax.me"
   rules:
   - matches:
     - path:
         type: PathPrefix
-        value: "/"
+        value: /
     timeouts:
       request: 30m
       backendRequest: 30m
     backendRefs:
-    - group: ''
+    - group: ""
       kind: Service
       name: llama-cpp-service
       port: 8080

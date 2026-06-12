@@ -4,11 +4,17 @@
 
 | Class | Use Case |
 |-------|----------|
-| `longhorn` | Distributed block storage (default) |
+| `longhorn` | Distributed block storage — **Talos cluster default**, served by the **V1 data engine** (chart default) with data as files under `/var/lib/longhorn` on each storage node's single 800G disk. **V2/SPDK was tried and retired 2026-06-12** — it failed under full-DR restore load (open Longhorn 1.12 bugs #13315/#13314); forensics in git history; short version in `docs/disaster-recovery.md`. Do not re-enable V2 without a fixed Longhorn release + a passed DR drill. |
+| `truenas-nfs` | Official TrueNAS CSI dynamic NFS (canary-gated, non-default; Talos at `clusters/talos/infra/truenas-csi/`) |
 | `nfs-comfyui-10g` | NFS 10G for ComfyUI models |
 | `nfs-llama-cpp-10g` | NFS 10G for LLM models |
 | `smb-csi` | Windows shares |
 | `local-path` | Node-local fast storage |
+
+`truenas-nfs` provisions new datasets under `BigTank/k8s/nfs/v`. It does not
+replace static `nfs.csi.k8s.io` PVs for pre-existing data. TrueNAS CSI v1.0.4
+creates NFS shares with `mapall` semantics; run the documented ownership
+canary before adopting the class for a workload that runs as a non-root UID.
 
 ## Longhorn PVC Template
 
@@ -24,7 +30,7 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  storageClassName: longhorn  # Default, can be omitted
+  storageClassName: longhorn  # Cluster default (V1 engine), can be omitted
 ```
 
 ## NFS Static PVs (CRITICAL: Use CSI, NOT legacy nfs:)

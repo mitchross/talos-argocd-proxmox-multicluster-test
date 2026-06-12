@@ -1,0 +1,14 @@
+# restore-canary is a Talos-only DR drill app: it exists to prove the
+# pvc-plumber/VolSync/Kopia restore path (see scripts/restore-canary-drill.sh
+# and docs/volsync-storage-recovery.md). OpenShift has no VolSync backup
+# coverage, so this overlay deploys only the namespace shell — the PVC and
+# Deployment are deleted. Revisit when an OpenShift backup policy is selected.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: restore-canary
+resources:
+- "../../../../../manifests/apps/system/restore-canary/base"
+patches:
+- path: patches/remove-talos-backup-namespace-restore-canary.yaml
+- path: patches/delete-talos-only-persistentvolumeclaim.yaml
+- path: patches/delete-talos-only-deployment.yaml

@@ -39,7 +39,7 @@ runtimeClass if you move it to a GPU worker).
 > ⚠️ **Do NOT wire VolSync `ReplicationSource`/`ReplicationDestination`
 > against the CNPG PVC.** CNPG uses Barman to S3 for DR, not VolSync.
 > Mixing both layers is a known footgun — see
-> `manifests/database/CLAUDE.md`.
+> `infrastructure/database/CLAUDE.md`.
 
 The `library` PVC is not currently VolSync-backed. It's large and the
 contents are regenerable from originals + DB (see `docs/domains/cnpg/disaster-recovery.md`
@@ -49,7 +49,7 @@ for the full recovery flow). Enable later if re-generating thumbnails for
 ## NFS static PV — why not dynamic
 
 The `nfs-immich-photos` PV is defined in
-`manifests/infra/csi-driver-nfs/storage-class.yaml`. It's a
+`infrastructure/storage/csi-driver-nfs/storage-class.yaml`. It's a
 **static** PV, not a dynamic one, because:
 
 - Dynamic NFS CSI creates a *new subdirectory per PVC*. That's fine for
@@ -68,7 +68,7 @@ Mount spec:
 
 ## Database — Postgres via CNPG
 
-Manifests: `manifests/database/cloudnative-pg/immich/`
+Manifests: `infrastructure/database/cloudnative-pg/immich/`
 
 - **Image:** `ghcr.io/tensorchord/cloudnative-vectorchord:17.5-0.4.3` (Postgres 17.5 + VectorChord 0.4.3)
 - **Extensions:** `vchord` (CASCADE-installs pgvector), `vector`, `earthdistance` (CASCADE-installs cube)

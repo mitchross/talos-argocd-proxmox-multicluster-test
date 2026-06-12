@@ -22,7 +22,7 @@
 # Sourcing the password + S3 creds: `Secret/volsync-kopia-repository` is the
 # shared Kopia repo Secret produced in this namespace by the
 # ClusterExternalSecret `volsync-kopia-repository`
-# (manifests/infra/volsync-backup-cluster/clusterexternalsecret.yaml).
+# (infrastructure/storage/volsync-backup-cluster/clusterexternalsecret.yaml).
 # The selector volsync.backube/privileged-movers=true is set on this namespace
 # in namespace.yaml. The Secret carries KOPIA_PASSWORD, AWS_ACCESS_KEY_ID,
 # AWS_SECRET_ACCESS_KEY (plus KOPIA_REPOSITORY/KOPIA_S3_* that this CronJob

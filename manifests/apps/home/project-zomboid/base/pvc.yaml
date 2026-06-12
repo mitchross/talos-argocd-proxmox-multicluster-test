@@ -51,6 +51,7 @@ spec:
     requests:
       storage: 60Gi
   storageClassName: vanillax-local-rwo
+
 # NOTE: inline ReplicationSource/zomboid-data + ReplicationDestination/
 # zomboid-data-dst were REMOVED on 2026-05-30 (pvc-plumber v4.0.1 DRY handoff).
 # pvc-plumber now owns the RS/RD lifecycle for zomboid-data. Do not re-add here.

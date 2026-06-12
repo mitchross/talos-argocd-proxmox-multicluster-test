@@ -1,7 +1,7 @@
 # Open WebUI
 
 Self-hosted ChatGPT-style frontend for the cluster's local LLM stack. Wires
-Open WebUI up to llama-cpp (OpenAI-compatible API), SearXNG for web search,
+Open WebUI up to vLLM (OpenAI-compatible API), SearXNG for web search,
 ComfyUI for image generation, Kiwix for offline RAG, and an MCP tool proxy
 (MCPO) for everything else.
 
@@ -21,42 +21,42 @@ ComfyUI for image generation, Kiwix for offline RAG, and an MCP tool proxy
                                │   │  │        └── mcpo-kiwix (port 8002, Kiwix fetch)
                                │   │  └── ComfyUI (image gen) ─→ Z-Image-Turbo / Qwen-Image-Edit
                                │   └── SearXNG (web search)
-                               └── llama-cpp-service.llama-cpp:8080/v1  (primary LLM)
+                               └── vllm-service.vllm:8080/v1  (primary LLM)
 ```
 
 Open WebUI itself is stateless UI + SQLite (on a PVC). The heavy lifting is
-elsewhere: llama-cpp holds the model in VRAM, ComfyUI owns the image-gen GPU,
-SearXNG handles search, MCPO exposes tool endpoints as OpenAPI.
+elsewhere: vLLM holds the model in VRAM, ComfyUI owns the image-gen GPU,
+SearXNG handles search, and MCPO exposes tool endpoints as OpenAPI. RAG
+embeddings run **locally inside the Open WebUI pod** (built-in
+SentenceTransformer, CPU) — no external embedding dependency. Open WebUI runs
+on a CPU worker; local Whisper STT is CPU-backed.
 
 ## Model & backend
 
-> ⚠️ **Source of truth is `configmap.yaml`.** If you change models, update the
-> ConfigMap — don't trust this README over the live config.
+> ⚠️ **Source of truth is `open-webui-configmap.env`.** If you change models,
+> update the env file — don't trust this README over the live config.
 
-Currently wired up (see `configmap.yaml`):
+Currently wired up (see `open-webui-configmap.env`):
 
 | Role                  | Model / Value                                                  |
 |-----------------------|----------------------------------------------------------------|
-| Chat backend          | `OPENAI_API_BASE_URL=http://llama-cpp-service.llama-cpp.svc.cluster.local:8080/v1` |
-| `DEFAULT_MODELS`      | `qwen3.6 - qwen3.6-35b-a3b` (think — best tool-calling + coding) |
-| `VISION_MODELS`       | `qwen3.6 - qwen3.6-35b-a3b` — Qwen 3.6 is multimodal via `mmproj-BF16.gguf` |
-| `TASK_MODEL`          | `qwen3.6-nothink - qwen3.6-35b-a3b-nothink` (title gen / tagging — same weights, skips thinking) |
-| `TASK_MODEL_EXTERNAL` | `qwen3.6-nothink - qwen3.6-35b-a3b-nothink`                    |
-| `CONTEXT_WINDOW`      | `65536` (64K) — **must match** the qwen3.6 preset's `ctx-size` in `manifests/apps/ai/llama-cpp/configmap.yaml`. If this is smaller, Open WebUI silently trims history / RAG before sending. |
-| Sampling              | `TEMPERATURE=0.6`, `TOP_P=0.95`, `MIN_P=0.0` — Qwen 3.6 official "precise" thinking profile. `TOP_K=20` is set by llama-cpp at the preset level. |
+| Chat backend          | `OPENAI_API_BASE_URL=http://vllm-service.vllm.svc.cluster.local:8080/v1` |
+| `DEFAULT_MODELS`      | `qwen3.6-27b` — first `--served-model-name` advertised by vLLM |
+| `VISION_MODELS`       | `qwen3.6-27b` |
+| `TASK_MODEL`          | `qwen3.6-27b` |
+| `TASK_MODEL_EXTERNAL` | `qwen3.6-27b` |
+| `CONTEXT_WINDOW`      | `65536` (64K) — keep aligned with vLLM `--max-model-len`. If this is smaller, Open WebUI silently trims history / RAG before sending. |
+| Sampling              | `TEMPERATURE=0.6`, `TOP_P=0.95`, `MIN_P=0.0` |
 | Image generation      | ComfyUI — Z-Image-Turbo (text→img, 9 steps), Qwen-Image-Edit-2511 (edit) |
-| Embeddings / STT      | Whisper `medium` (in-pod), OpenAI TTS voice `alloy`            |
+| Embeddings            | Built-in local SentenceTransformer (CPU, in-pod) — no external service |
+| STT / TTS             | Whisper `medium` on CPU (in-pod), OpenAI TTS voice `alloy` |
 
-Model swap happens server-side (on llama-cpp) and is instant between
-think/nothink presets because both point at the same GGUF + mmproj.
-Switching between `qwen3.6` and `gemma4` does re-load weights (different
-files), so expect a few seconds of dead air on first request after swap.
+vLLM is served from `my-apps/ai/vllm/deployment.yaml`; the Open WebUI model ID
+must match one of that Deployment's `--served-model-name` values. The first
+served name, `qwen3.6-27b`, is the canonical UI default. vLLM deliberately
+advertises only that one name so Open WebUI's model selector stays clean.
 
-> Gemma 4 is still served by llama-cpp as a multimodal **fallback** —
-> you can select it manually per-chat in the UI. Qwen 3.6 is the default
-> for both text and vision routes.
-
-## Performance tuning (ConfigMap)
+## Performance tuning (env ConfigMap)
 
 Non-default env vars that matter, grouped by why they exist:
 
@@ -66,10 +66,10 @@ Non-default env vars that matter, grouped by why they exist:
 |----------------------------------------|-------|-----|
 | `THREAD_POOL_SIZE`                     | `500` | Default (40) chokes under concurrent chat + RAG + tool calls. |
 | `AIOHTTP_CLIENT_TIMEOUT`               | `1800` (30 min) | Matches the HTTPRoute timeout so long completions aren't cut off mid-stream. |
-| `AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST`    | `30` | Model list probe — llama-cpp can stall briefly when swapping models. |
+| `AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST`    | `30` | Model list probe timeout. |
 | `CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE`| `5`  | Batch 5 tokens per SSE push. Cuts CPU/network overhead vs per-token flushing. |
 | `ENABLE_COMPRESSION_MIDDLEWARE`        | `True` | Gzip HTTP responses — meaningful for large RAG payloads. |
-| `MODELS_CACHE_TTL` / `ENABLE_BASE_MODELS_CACHE` | `300` / `True` | Avoid hammering llama-cpp's `/v1/models` on every page nav. |
+| `MODELS_CACHE_TTL` / `ENABLE_BASE_MODELS_CACHE` | `300` / `False` | Keep Open WebUI from caching an empty model list if vLLM is down during startup. |
 | `ENABLE_QUERIES_CACHE`                 | `True` | Reuse LLM-generated RAG search queries across similar prompts. |
 
 ### RAG
@@ -80,7 +80,8 @@ Non-default env vars that matter, grouped by why they exist:
 | `RAG_TOP_K`                  | `10`   | Hybrid search retrieves more; model does the culling. |
 | `ENABLE_RAG_HYBRID_SEARCH`   | `True` | BM25 + embedding — better recall on technical content than pure vector. |
 | `RAG_SYSTEM_CONTEXT`         | `True` | Inject retrieved chunks into the system message (better for KV cache reuse than stuffing user msg). |
-| `USE_CUDA_DOCKER`            | `true` | RAG embeddings run on GPU. |
+| `RAG_EMBEDDING_BATCH_SIZE`   | `8` | Batch size for the built-in local embedder. |
+| `USE_CUDA_DOCKER`            | `false` | Open WebUI has no GPU; vLLM exclusively reserves both 3090s. Embeddings run on CPU in-pod (default `RAG_EMBEDDING_ENGINE`, no external service). |
 | `PDF_EXTRACT_IMAGES`         | `True` | Required for vision RAG over PDF diagrams. |
 
 ### UX
@@ -88,7 +89,7 @@ Non-default env vars that matter, grouped by why they exist:
 | Var                                   | Value  | Why |
 |---------------------------------------|--------|-----|
 | `ENABLE_AUTOCOMPLETE_GENERATION`      | `False` | Fires on every keystroke → massive API load for marginal UX gain. |
-| `ENABLE_PERSISTENT_CONFIG`            | `True` | Lets admins edit settings in the UI without losing them on pod restart. |
+| `ENABLE_PERSISTENT_CONFIG`            | `False` | Forces Open WebUI to use GitOps env values instead of stale DB-stored connection settings. |
 | `SHOW_THOUGHTS`                       | `True` | Render `<think>` blocks from thinking-capable models. |
 
 ## Features
@@ -123,7 +124,7 @@ Applied by ArgoCD automatically (directory = Application). Files:
 | File                      | Purpose                                                          |
 |---------------------------|------------------------------------------------------------------|
 | `namespace.yaml`          | `open-webui` namespace                                           |
-| `configmap.yaml`          | **All** env-based config. Source of truth for behavior.          |
+| `open-webui-configmap.env`| **All** env-based config. Source of truth for behavior.          |
 | `deployment.yaml`         | Open WebUI main Deployment (stateful via PVC below)              |
 | `pvc.yaml`                | SQLite + uploaded files persist here                             |
 | `service.yaml`            | ClusterIP for HTTPRoute                                          |
@@ -136,7 +137,7 @@ Applied by ArgoCD automatically (directory = Application). Files:
 
 Force a manual apply (bypassing ArgoCD, for dev):
 ```bash
-kubectl apply -k manifests/apps/ai/open-webui/
+kubectl apply -k my-apps/ai/open-webui/
 ```
 
 ## Access
@@ -146,8 +147,9 @@ kubectl apply -k manifests/apps/ai/open-webui/
 ## Troubleshooting
 
 **No models showing up in the UI**
-- Check `kubectl logs -n llama-cpp deploy/llama-cpp` — what model name is advertised?
-- Compare against `DEFAULT_MODELS` in `configmap.yaml`. They must match exactly, including spaces.
+- Check `curl -s http://vllm-service.vllm.svc.cluster.local:8080/v1/models` from inside the cluster — what model name is advertised?
+- Compare against `DEFAULT_MODELS` in `open-webui-configmap.env`. It must match a vLLM `--served-model-name` value exactly.
+- If Open WebUI cached an empty model list while vLLM was crashlooping, restart `deploy/open-webui` after vLLM is healthy.
 
 **Tools tab is empty**
 - `kubectl logs -n open-webui deploy/mcpo` — MCPO pods crash loudly if the API keys don't match `OPENAPI_API_ENDPOINTS`.
@@ -162,11 +164,11 @@ kubectl apply -k manifests/apps/ai/open-webui/
 
 ## Gotchas
 
-- **ConfigMap is law.** Changing models/settings in the UI only sticks if
-  `ENABLE_PERSISTENT_CONFIG=True` *and* you're editing UI-scoped settings.
-  ConfigMap values override on pod restart.
+- **Env ConfigMap is law.** `ENABLE_PERSISTENT_CONFIG=False` forces Open WebUI
+  to read these GitOps values on restart; UI edits to connection/model settings
+  are session-only.
 - **MCPO key must match** between the MCPO Deployment env and
   `OPENAPI_API_ENDPOINTS` — format is
   `name:url:api_key;name:url:api_key;…`.
 - **PVC is RWO.** Deployment uses `strategy: Recreate` (see
-  `manifests/apps/CLAUDE.md` — RWO + RollingUpdate = Multi-Attach deadlock).
+  `my-apps/CLAUDE.md` — RWO + RollingUpdate = Multi-Attach deadlock).

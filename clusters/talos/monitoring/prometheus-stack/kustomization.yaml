@@ -30,7 +30,7 @@ resources:
 # annotation that exceeds Kubernetes' 256KB metadata.annotations cap. The
 # 6 CRDs annotated below have all hit this in practice; we force per-CRD
 # ServerSideApply + Replace to skip the client-side annotation entirely.
-# See manifests/database/cloudnative-pg/cloudnative-pg-operator/
+# See clusters/talos/database/cloudnative-pg/cloudnative-pg-operator/
 # kustomization.yaml for the same defensive pattern on CNPG's CRDs.
 # Incident: 2026-05-07 ArgoCD sync failure post-Kyverno-removal merge.
 patches:
@@ -44,7 +44,7 @@ patches:
 helmCharts:
   - name: kube-prometheus-stack
     repo: https://prometheus-community.github.io/helm-charts
-    version: 84.5.0
+    version: 86.2.2
     releaseName: kube-prometheus-stack
     namespace: prometheus-stack
     valuesFile: values.yaml

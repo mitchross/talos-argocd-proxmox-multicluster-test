@@ -5,16 +5,16 @@ metadata:
   namespace: immich
 spec:
   parentRefs:
-  - name: gateway-internal
-    namespace: gateway
-    sectionName: https
+    - name: gateway-internal
+      namespace: gateway
+      sectionName: https
   hostnames:
-  - photos.vanillax.me
+    - "photos.vanillax.me"
   rules:
-  - backendRefs:
-    - name: immich-server
-      port: 2283
-    matches:
-    - path:
-        type: PathPrefix
-        value: "/"
+    - backendRefs:
+        - name: immich-server
+          port: 2283
+      matches:
+        - path:
+            type: PathPrefix
+            value: /

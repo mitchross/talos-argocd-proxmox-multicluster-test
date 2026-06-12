@@ -3,7 +3,7 @@
 # Grafana auto-discovers this ConfigMap via the sidecar (grafana_dashboard: "1" label)
 # and imports the JSON at data."gpu-overview.json".
 #
-# Data source: Prometheus, scraping dcgm-exporter (manifests/monitoring/prometheus-stack/dcgm-exporter.yaml).
+# Data source: Prometheus, scraping dcgm-exporter (monitoring/prometheus-stack/dcgm-exporter.yaml).
 # The dcgm-exporter ServiceMonitor causes Prometheus to relabel colliding labels:
 #   pod                 -> the dcgm-exporter pod (scrape target)
 #   exported_pod        -> the GPU-using pod (what we actually care about)

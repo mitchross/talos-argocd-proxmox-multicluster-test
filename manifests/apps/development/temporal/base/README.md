@@ -4,7 +4,7 @@ Self-hosted Temporal server for the cluster. This directory deploys the
 **server**; application workers (e.g. `news-reader-temporal-worker`,
 `radar-ng`'s temporal worker) live in their own sibling dirs and connect
 in via `TemporalConnection` CRs from the
-[Temporal Worker Controller](../../../manifests/infra/temporal-worker-controller/).
+[Temporal Worker Controller](../../../infrastructure/controllers/temporal-worker-controller/).
 
 Read this *with* `news-reader/temporal/README.md` (in the news-reader
 repo) — together they cover server side + app side of the same system.
@@ -87,7 +87,7 @@ sequenceDiagram
     participant Seed as namespace-init-job<br/>(PostSync)
     participant CLI as tctl seed-namespaces.sh
 
-    Argo->>CNPG: already running (separate App, manifests/database/cloudnative-pg/temporal)
+    Argo->>CNPG: already running (separate App, infrastructure/database/cloudnative-pg/temporal)
     Argo->>Job: Sync wave -1 — apply schema-job
     Job->>CNPG: temporal-sql-tool setup-schema + update-schema
     CNPG-->>Job: done
@@ -141,7 +141,7 @@ server:
 ```
 
 The `temporal-database` CNPG cluster (operator at
-`manifests/database/cloudnative-pg/`) gives us automated backups,
+`infrastructure/database/cloudnative-pg/`) gives us automated backups,
 HA-ready PG, and a `-rw` Service that resolves to whichever Pod is
 currently primary. Two databases — one for workflow history, one for
 visibility (searchable workflow attributes).
@@ -207,8 +207,8 @@ Important distinction (this confuses everyone the first time):
 
 | Thing | Where | What it manages |
 |---|---|---|
-| **Temporal server** | `manifests/apps/development/temporal/` (this dir) | The server itself — frontend, history, matching, web, server-worker. Deployed via the official Helm chart. |
-| **Temporal Worker Controller** | `manifests/infra/temporal-worker-controller/` | A *Kubernetes controller* (CRD-based). Watches your `TemporalWorkerDeployment` CRs and turns each into a versioned `apps/v1 Deployment`. Handles Worker Versioning rollouts. |
+| **Temporal server** | `my-apps/development/temporal/` (this dir) | The server itself — frontend, history, matching, web, server-worker. Deployed via the official Helm chart. |
+| **Temporal Worker Controller** | `infrastructure/controllers/temporal-worker-controller/` | A *Kubernetes controller* (CRD-based). Watches your `TemporalWorkerDeployment` CRs and turns each into a versioned `apps/v1 Deployment`. Handles Worker Versioning rollouts. |
 
 You can run the server without the worker controller — workers would
 just be plain Deployments and you'd lose progressive rollouts. We use
@@ -220,8 +220,8 @@ both because Worker Versioning is the whole point.
 
 | App | Path |
 |---|---|
-| `news-reader-temporal-worker` (news-digest task queue) | `manifests/apps/development/news-reader-temporal-worker/` |
-| `radar-ng` workers | `manifests/apps/development/radar-ng/temporal-worker-deployment.yaml` |
+| `news-reader-temporal-worker` (news-digest task queue) | `my-apps/development/news-reader-temporal-worker/` |
+| `radar-ng` workers | `my-apps/development/radar-ng/temporal-worker-deployment.yaml` |
 
 Each ships its own `TemporalConnection` CR pointing at
 `temporal-frontend.temporal.svc.cluster.local:7233` and its own

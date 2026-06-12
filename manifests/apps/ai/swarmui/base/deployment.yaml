@@ -7,7 +7,7 @@ spec:
   # RWO Longhorn PVCs -> Recreate (RollingUpdate causes Multi-Attach deadlock).
   strategy:
     type: Recreate
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: swarmui
@@ -61,7 +61,7 @@ spec:
         - name: TORCH_CUDA_ARCH_LIST
           value: "8.6"
         # NOTE: do NOT set NVIDIA_VISIBLE_DEVICES / CUDA_VISIBLE_DEVICES — they
-        # override the device-plugin CDI injection (see manifests/apps/ai/CLAUDE.md).
+        # override the device-plugin CDI injection (see my-apps/ai/CLAUDE.md).
         resources:
           requests:
             memory: "8Gi"

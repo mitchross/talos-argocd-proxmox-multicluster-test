@@ -57,16 +57,24 @@ The `serverName` values below live in each DB's `base/cluster.yaml` and
 
 | Database  | Current write target (base)  | Prior lineage (recovery source) |
 |-----------|------------------------------|---------------------------------|
-| gitea     | `gitea-database-v2`          | `gitea-database-v1`             |
-| immich    | `immich-database-v1`         | `immich-database-v1`            |
-| paperless | `paperless-database-v1`      | `paperless-database-v1`         |
-| temporal  | `temporal-database-v1`       | `temporal-database-v1`          |
+| gitea     | `gitea-database-v6`          | `gitea-database-v5`             |
+| immich    | `immich-database-v4`         | `immich-database-v3`            |
+| paperless | `paperless-database-v4`      | `paperless-database-v3`         |
+| temporal  | `temporal-database-v6`       | `temporal-database-v5`          |
 
-All DBs reset to `-v1` baseline on 2026-04-19 after S3 was wiped — prior
-lineages (`-v2` through `-v7`) no longer exist on RustFS. gitea bumped to
-`-v2` on 2026-05-02 after a GPU worker node deletion left the WAL Longhorn
-volume faulted; restored from `gitea-database-v1` (last good Barman base
-2026-05-02T17:09:43Z).
+All four bumped TWICE on 2026-06-11: once for the Longhorn V2 rebuild
+nuke, and again for the same-day re-nuke (SPDK cpu-mask validation run)
+because the aborted first attempt dirtied the fresh prefixes (immich and
+paperless archived WALs before the SPDK wedge stalled the rebuild).
+Fresh initdb on clean prefixes keeps the WAL-archive empty check passing.
+The prior lineages exist on RustFS but are
+**unrestorable** until the RustFS multipart bug is fixed — all Barman base
+backups upload multipart and RustFS cannot serve multipart objects
+("encrypted object metadata is incomplete"). DB DR via Barman is therefore
+non-functional cluster-wide; treat DB data as disposable until RustFS is
+fixed or backups are rerouted. History: all DBs reset to `-v1` on
+2026-04-19 (S3 wipe); gitea `-v2` 2026-05-02 (GPU node loss, real Barman
+restore); gitea/temporal `-v3` opened around the 2026-06-02 first nuke.
 
 ## Normal operation (add a new CNPG DB)
 

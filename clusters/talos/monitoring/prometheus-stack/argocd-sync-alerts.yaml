@@ -22,7 +22,7 @@ spec:
   # alertable: ArgoCD reported green AND kube-state-metrics saw a self-consistent
   # (old-but-rolled-out) Deployment object. Nothing exported "wrong". That specific
   # masquerade is mitigated structurally by the periodic hard reconciliation
-  # re-enabled in clusters/talos/infra/argocd/values.yaml
+  # re-enabled in infrastructure/controllers/argocd/values.yaml
   # (timeout.hard.reconciliation: 1h), which busts the stale cache on a schedule.
   # The closest observable systemic proxy is ArgoCDControllerReconcileStalled below.
   # The remaining rules catch the broad, genuinely-detectable failure classes.

@@ -5,20 +5,20 @@ metadata:
   namespace: kube-system
 spec:
   parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: Gateway
-    name: gateway-internal
-    namespace: gateway
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-internal
+      namespace: gateway
   hostnames:
-  - headlamp.vanillax.me
+    - "headlamp.vanillax.me"
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: "/"
-    backendRefs:
-    - group: ''
-      kind: Service
-      name: headlamp
-      port: 80
-      weight: 1
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: headlamp
+          port: 80
+          weight: 1

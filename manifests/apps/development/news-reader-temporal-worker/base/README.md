@@ -38,13 +38,13 @@ flowchart LR
 
     subgraph talos[gitea.vanillax.me/vanillax/talos-argocd-proxmox]
         REN[.github/renovate.json5]
-        TWD[manifests/apps/development/news-reader-temporal-worker/<br/>temporal-worker-deployment.yaml]
+        TWD[my-apps/development/news-reader-temporal-worker/<br/>temporal-worker-deployment.yaml]
     end
 
     subgraph cluster[Talos cluster]
-        WC[temporal-worker-controller<br/>manifests/infra/]
+        WC[temporal-worker-controller<br/>infrastructure/controllers/]
         DEP[apps/v1 Deployment<br/>news-digest-vX.Y.Z]
-        T[Temporal server<br/>manifests/apps/development/temporal/]
+        T[Temporal server<br/>my-apps/development/temporal/]
     end
 
     CODE --> GHA
@@ -68,7 +68,7 @@ sees a new semver tag it opens a PR that edits the `image:` line in
 ## What the Temporal Worker Controller does (in this dir's context)
 
 The controller (deployed under
-`manifests/infra/temporal-worker-controller/`) is the operator
+`infrastructure/controllers/temporal-worker-controller/`) is the operator
 that watches `TemporalWorkerDeployment` CRs. When you bump the image
 field in `temporal-worker-deployment.yaml`:
 

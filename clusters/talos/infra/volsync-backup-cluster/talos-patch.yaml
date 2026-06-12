@@ -19,7 +19,7 @@
 #
 # WHERE TO APPLY: this repo's Talos config lives under omni/cluster-template/.
 # Merge the snippet below into the cluster-template-level config patch (the
-# one already used for sysctls/udev rules — see manifests/infra/
+# one already used for sysctls/udev rules — see infrastructure/storage/
 # CLAUDE.md "Fix applied in Talos machine config" section for the pattern).
 # Apply via Omni (the cluster is Omni-managed); a rolling control-plane
 # update will pick it up.

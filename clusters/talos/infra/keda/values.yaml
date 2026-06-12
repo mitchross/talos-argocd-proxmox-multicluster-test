@@ -57,7 +57,7 @@ webhooks:
 # app coupled cluster restore to Prometheus Operator and deadlocked the
 # 2026-06-01 nuke/rebuild. Observability is OPTIONAL and must not be a bootstrap
 # dependency. The KEDA ServiceMonitors now live in the separate post-monitoring
-# app `keda-observability` (manifests/infra/keda-observability).
+# app `keda-observability` (infrastructure/controllers/keda-observability).
 # Do NOT re-enable these here.
 prometheus:
   metricServer:

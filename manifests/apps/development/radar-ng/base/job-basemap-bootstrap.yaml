@@ -9,7 +9,7 @@
 #   retention and no `latest` alias. A hardcoded YYYYMMDD rots in ~6 days
 #   and the rot is invisible until the Job is recreated (cluster DR /
 #   namespace rebuild) — then it 404s at the worst possible time. The
-#   custom image (manifests/apps/development/radar-ng/basemap-bootstrap-image/)
+#   custom image (my-apps/development/radar-ng/basemap-bootstrap-image/)
 #   resolves the newest build that actually exists at run time, so nothing
 #   here ever needs a date bump. Build/push via
 #   scripts/build-push-custom-apps.sh basemap-bootstrap.
@@ -61,7 +61,7 @@ spec:
         - name: extract
           # Self-healing wrapper: resolves the newest available Protomaps
           # build at run time and runs `pmtiles extract`. Source/Dockerfile:
-          # manifests/apps/development/radar-ng/basemap-bootstrap-image/
+          # my-apps/development/radar-ng/basemap-bootstrap-image/
           image: registry.vanillax.me/basemap-bootstrap:latest
           # Always: the :latest wrapper is self-built; on Job recreate we
           # want the current image, not a stale node-cached layer.

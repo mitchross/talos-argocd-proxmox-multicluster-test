@@ -5,17 +5,17 @@ metadata:
   namespace: perplexica
 spec:
   parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: Gateway
-    name: gateway-internal
-    namespace: gateway
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-internal
+      namespace: gateway
   hostnames:
-  - perplexica.vanillax.me
+    - "perplexica.vanillax.me"
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: "/"
-    backendRefs:
-    - name: perplexica
-      port: 3000
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: perplexica
+          port: 3000

@@ -1,0 +1,9 @@
+{
+  "applicationName": "talos-infra-truenas-csi",
+  "cluster": "talos",
+  "project": "talos-infrastructure",
+  "namespace": "truenas-csi",
+  "part": "infra",
+  "syncWave": "4",
+  "sourcePath": "clusters/talos/infra/truenas-csi"
+}

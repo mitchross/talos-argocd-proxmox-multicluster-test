@@ -6,22 +6,31 @@ metadata:
   labels:
     app: vllm-server
 spec:
-  strategy:
-    type: Recreate
+  # vLLM is the active in-cluster LLM backend (TP=2 across both 3090s).
+  # llama-cpp is scaled to 0 (frees GPU0); comfyui already 0 (GPU1 idle).
+  # To revert: set this to 0 and llama-cpp-server back to 1 (one commit).
   replicas: 1
+  strategy:
+    type: Recreate            # whole-card GPU workload; never two pods on the cards at once
+  revisionHistoryLimit: 1
   selector:
     matchLabels:
       app: vllm-server
-  revisionHistoryLimit: 1
   template:
     metadata:
       labels:
         app: vllm-server
     spec:
+      # Don't inject legacy Docker-link service env vars (VLLM_SERVICE_*, etc.).
+      # The Service is named `vllm-service`, so those collide with vLLM's own
+      # VLLM_* env scan and spam "Unknown vLLM environment variable" warnings.
+      enableServiceLinks: false
       restartPolicy: Always
       runtimeClassName: nvidia
       priorityClassName: gpu-workload-high
       terminationGracePeriodSeconds: 120
+      nodeSelector:
+        feature.node.kubernetes.io/pci-0300_10de.present: "true"
       tolerations:
         - key: "nvidia.com/gpu"
           operator: "Exists"
@@ -31,88 +40,118 @@ spec:
         fsGroupChangePolicy: "OnRootMismatch"
       containers:
         - name: vllm-server
+          # Digest-pinned (== `latest` at pin time, 2026-06). Renovate-trackable + immutable.
           image: vllm/vllm-openai:v0.22.1@sha256:953d3a06d5e64ab582985cd7401289d3abf2a2c14ef2158e9a84313daeec77d7
           imagePullPolicy: IfNotPresent
-          # Explicit `vllm serve` so the spec is independent of the image's
-          # ENTRYPOINT (which has changed shape across vllm-openai releases).
-          command: ["vllm", "serve"]
+          # The image entrypoint runs `vllm serve`; the first arg is the positional model_tag.
           args:
-            - "Qwen/Qwen3-32B-AWQ" # ~19GB AWQ weights; with TP=2 across 2x3090 (48GB) leaves ~24GB headroom for KV cache
+            - "/models/Qwen3.6-27B-AWQ-BF16-INT4"     # default model (higher quality; fits TP=2 / 48GB)
+            # served-model-name is a LIST (nargs+). Keep a single canonical
+            # id so Open WebUI's model selector is not cluttered with aliases.
+            # The next token MUST be a flag (--tensor-parallel-size) to end the list.
             - "--served-model-name"
-            - "qwen3-32b"
+            - "qwen3.6-27b"                                    # canonical
             - "--tensor-parallel-size"
-            - "2"                  # one shard per 3090. Single-card fallback: set to 1 AND swap to a <=20GB model (e.g. Qwen3-14B-AWQ)
-            - "--max-model-len"
-            - "32768"
+            - "2"                                      # pool both 3090s (48GB). Needs 2 WHOLE cards.
+            - "--distributed-executor-backend"
+            - "mp"                                     # single-node multiprocessing; no Ray
+            - "--disable-custom-all-reduce"            # 3090s have no NVLink/P2P → vLLM uses PYNCCL anyway; makes it explicit + silences the warning
             - "--gpu-memory-utilization"
-            - "0.90"
+            - "0.92"
+            - "--max-model-len"
+            - "262144"                                 # full 262K native context; fits via fp8 KV + TP=2 paged cache
+            - "--max-num-seqs"
+            - "2"                                      # 262K = deep single-stream; low concurrency keeps the KV pool sane
+            - "--limit-mm-per-prompt"
+            - '{"image": 4}'                           # vision-capable; current vLLM requires JSON, not image=4
+            - "--enable-auto-tool-choice"              # Perplexica sends tool_choice=auto for research/search flows
+            - "--tool-call-parser"
+            - "qwen3_coder"                            # author-recommended parser for Qwen3.6 (was qwen3_xml)
+            - "--reasoning-parser"
+            - "qwen3"                                  # split <think> out of content into reasoning_content
+                                                       # (keeps thinking quality; tools/UIs get a clean answer)
+            - "--default-chat-template-kwargs"
+            - '{"enable_thinking": false}'             # default thinking OFF (fast/clean for tools); UIs can re-enable per-request
+            - "--kv-cache-dtype"
+            - "fp8_e4m3"                               # halves KV — required to fit 262K on 48GB. MUST be e4m3 (scaled): this
+                                                       # compressed-tensors checkpoint ships calibrated fp8 KV scales, and vLLM
+                                                       # rejects fp8_e5m2 (unscaled) against fp8 checkpoints — server fails to boot.
+            - "--enable-prefix-caching"                # reuse KV across shared system prompts (open-webui/k8sgpt/perplexica)
+            - "--enable-chunked-prefill"               # required to prefill 262K prompts without OOM/stall
+            - "--max-num-batched-tokens"
+            - "8192"                                   # chunked-prefill chunk size (262K prompt -> 32 chunks)
+            - "--override-generation-config"
+            - '{"temperature":0.7,"top_p":0.8,"top_k":20,"presence_penalty":1.5}'  # Qwen3.6 nothink sampling defaults
             - "--host"
             - "0.0.0.0"
             - "--port"
             - "8000"
           env:
-            # GPU selection is handled by the device plugin + CDI — the plugin
-            # mounts exactly the allocated cards. Do NOT set
-            # NVIDIA_VISIBLE_DEVICES or CUDA_VISIBLE_DEVICES; either one
-            # overrides the plugin's injection (same rule as llama-cpp).
+            # GPU selection is handled by the device plugin + CDI (whole-card, time-slicing OFF).
+            # Do NOT set NVIDIA_VISIBLE_DEVICES / CUDA_VISIBLE_DEVICES — they override CDI injection.
             - name: NVIDIA_DRIVER_CAPABILITIES
               value: "compute,utility"
-            - name: HF_HOME
-              value: "/cache/hf"
-            # If TP=2 hangs at NCCL init on the 2950X (X399 PCIe P2P/IOMMU
-            # quirk on first-gen Threadripper; no NVLink on this rig),
-            # uncomment to force NCCL onto shared-memory/host transport:
-            # - name: NCCL_P2P_DISABLE
-            #   value: "1"
+            - name: HF_HUB_OFFLINE          # models are local on NFS; never call the Hub at runtime
+              value: "1"
+            - name: TRANSFORMERS_OFFLINE
+              value: "1"
+            - name: VLLM_NO_USAGE_STATS     # no phone-home
+              value: "1"
+            - name: VLLM_USE_FLASHINFER_SAMPLER   # faster top-p/top-k sampling on sm_86
+              value: "1"
+            - name: VLLM_WORKER_MULTIPROC_METHOD
+              value: "spawn"
+            - name: OMP_NUM_THREADS         # silences the 16->1 thread warning; matches club-3090 recipe
+              value: "1"
+            - name: NCCL_P2P_DISABLE        # 3090s have no NVLink/P2P
+              value: "1"
+            - name: NCCL_CUMEM_ENABLE
+              value: "0"
+            - name: PYTORCH_CUDA_ALLOC_CONF # cut fragmentation / OOM on 24GB activation peaks
+              value: "expandable_segments:True,max_split_size_mb:512"
           ports:
             - name: http
               containerPort: 8000
               protocol: TCP
           startupProbe:
-            httpGet:
-              path: /health
-              port: http
+            httpGet: { path: /health, port: http }
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
-            failureThreshold: 360 # cold start downloads ~19GB then loads + CUDA-graphs both cards; allow ~1h
+            failureThreshold: 360        # TP load of a 27B can take minutes
           livenessProbe:
-            httpGet:
-              path: /health
-              port: http
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 60
             periodSeconds: 30
             timeoutSeconds: 10
             failureThreshold: 3
           readinessProbe:
-            httpGet:
-              path: /health
-              port: http
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
           resources:
-            limits:
-              cpu: "16"
-              memory: 64Gi
-              nvidia.com/gpu: "2"
-              ephemeral-storage: "30Gi"
+            # GPU node has 16 vCPU — keep request schedulable and limit within the node.
             requests:
+              nvidia.com/gpu: "2"
               cpu: "4"
               memory: 24Gi
+            limits:
               nvidia.com/gpu: "2"
-              ephemeral-storage: "10Gi"
+              cpu: "14"          # leave ~2 vCPU for kubelet/cilium/device-plugin/otel
+              memory: 64Gi
           volumeMounts:
-            - name: hf-cache
-              mountPath: /cache
+            - name: models
+              mountPath: /models
+              readOnly: true
             - name: dshm
-              mountPath: /dev/shm
+              mountPath: /dev/shm        # TP workers IPC over shared memory — size it generously
       volumes:
-        - name: hf-cache
+        - name: models
           persistentVolumeClaim:
-            claimName: vllm-hf-cache
+            claimName: vllm-models-pvc
         - name: dshm
           emptyDir:
             medium: Memory
-            sizeLimit: 16Gi # NCCL cross-rank buffers for TP=2 live in /dev/shm
-      nodeSelector:
-        feature.node.kubernetes.io/pci-0300_10de.present: "true"
+            sizeLimit: 16Gi

@@ -7,7 +7,7 @@ resources:
   - kopia-maintenance-cronjob.yaml
   # orphan-reaper.yaml removed — pvc-plumber v2 operator's PVC reconciler
   # cleanup() reaps orphan ES/RS/RD by label on PVC delete / backup label
-  # removal. See manifests/infra/pvc-plumber/ and
+  # removal. See infrastructure/controllers/pvc-plumber/ and
   # docs/plans/pvc-plumber-operator-design.md.
 helmCharts:
   - name: volsync

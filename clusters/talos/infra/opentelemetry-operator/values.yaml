@@ -12,7 +12,7 @@ manager:
   # chart-rendered ServiceMonitor races the CRD install and can SyncFailed on a
   # fresh nuke. The operator's ServiceMonitor now lives in the separate
   # post-monitoring app `opentelemetry-operator-observability` (Wave 6); see
-  # manifests/infra/opentelemetry-operator-observability/.
+  # infrastructure/controllers/opentelemetry-operator-observability/.
   # Do NOT re-enable this here.
   serviceMonitor:
     enabled: false

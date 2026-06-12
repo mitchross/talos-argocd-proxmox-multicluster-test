@@ -78,7 +78,7 @@ helmCharts:
         operator: Equal
         value: "true"
         effect: NoSchedule
-    # DCGM exporter runs as a standalone DaemonSet in manifests/monitoring/prometheus-stack.
+    # DCGM exporter runs as a standalone DaemonSet in monitoring/prometheus-stack.
     # Keep the operator's copy disabled to avoid two exporters scraping the same
     # GPUs and ServiceMonitor label collisions.
     dcgm:

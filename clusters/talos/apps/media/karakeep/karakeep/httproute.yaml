@@ -4,26 +4,28 @@ metadata:
   name: karakeep
   namespace: karakeep
   labels:
-    external-dns: 'true'
+    external-dns: "true"  # Enable ExternalDNS for this route
   annotations:
-    external-dns.alpha.kubernetes.io/target: vanillax.me
+    # ExternalDNS will create a CNAME record pointing to vanillax.me
+    # which then points to the Cloudflare Tunnel
+    external-dns.alpha.kubernetes.io/target: "vanillax.me"
 spec:
   parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: Gateway
-    name: gateway-external
-    namespace: gateway
-    sectionName: https
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-external
+      namespace: gateway
+      sectionName: https
   hostnames:
-  - karakeep.vanillax.me
+    - "karakeep.vanillax.me"
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: "/"
-    backendRefs:
-    - group: ''
-      kind: Service
-      name: karakeep-web
-      port: 3000
-      weight: 1
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: karakeep-web
+          port: 3000
+          weight: 1

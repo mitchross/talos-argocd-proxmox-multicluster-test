@@ -39,6 +39,9 @@ spec:
       - path: clusters/talos/infra/container-registry/.argocd/config.json
       - path: clusters/talos/infra/csi-driver-nfs/.argocd/config.json
       - path: clusters/talos/infra/csi-driver-smb/.argocd/config.json
+      # Official TrueNAS CSI: dynamic RWX NFS only for the initial canary.
+      # Longhorn stays default; static/pre-existing NFS stays on nfs.csi.k8s.io.
+      - path: clusters/talos/infra/truenas-csi/.argocd/config.json
       - path: clusters/talos/infra/local-storage/.argocd/config.json
       # NOTE: longhorn, snapshot-controller, volsync are NOT listed here
       # They have dedicated standalone Applications at Wave 1 (longhorn-app.yaml,

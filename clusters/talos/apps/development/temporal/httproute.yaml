@@ -5,20 +5,20 @@ metadata:
   namespace: temporal
 spec:
   parentRefs:
-  - group: gateway.networking.k8s.io
-    kind: Gateway
-    name: gateway-internal
-    namespace: gateway
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-internal
+      namespace: gateway
   hostnames:
-  - temporal.vanillax.me
+    - "temporal.vanillax.me"
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: "/"
-    backendRefs:
-    - group: ''
-      kind: Service
-      name: temporal-web
-      port: 8080
-      weight: 1
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: temporal-web
+          port: 8080
+          weight: 1

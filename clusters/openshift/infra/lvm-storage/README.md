@@ -11,6 +11,14 @@ the v4.22 `redhat-operators` index still does not publish `lvms-operator`
 re-poll every 240 minutes; this entry stays staged until the packagemanifest
 appears.
 
+> **Hardware gate added 2026-06-10:** the SNO's target hardware is now the
+> bare-metal **Threadripper 2950X** (Assisted Installer reinstall — see the
+> target-hardware section in `docs/domains/multicluster/handoff-notes.md`).
+> Any second-SSD identity discovered on the CURRENT box is throwaway: the
+> by-id path in `lvm-storage.yaml` must be (re-)discovered on the 2950X
+> after that reinstall. If both gates clear at once, just run the checklist
+> below on the new box.
+
 ## Why an OLM Subscription when this repo avoids OperatorHub
 
 The repo's stance is **GitOps-installed everything, no console-clicked
@@ -71,7 +79,7 @@ the live cluster.
 | Class | Backing | Use for |
 |-------|---------|---------|
 | `vanillax-local-rwo` (default) | TrueNAS iSCSI (off-node, Retain) | app data that must survive a node reinstall |
-| `lvms-vg1` (this entry) | second SSD, thin LVM, snapshots | model caches, scratch, vector DBs — fast node-local |
+| `lvms-vg1` (this entry) | second SSD, thin LVM, snapshots | model caches, scratch, vector DBs — fast node-local (planned first tenant: `vllm-hf-cache`, see `manifests/apps/ai/vllm/README.md`) |
 | `truenas-nfs-csi` | TrueNAS NFS (RWX) | shared media |
 
 `lvms-vg1` is deliberately **not** the cluster default, and shared app bases

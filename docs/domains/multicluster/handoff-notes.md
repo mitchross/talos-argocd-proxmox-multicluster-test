@@ -41,6 +41,55 @@ Operator decisions and verified facts (these dates):
   `registry.redhat.io/redhat/redhat-operator-index:v4.22` with
   `pullPolicy: Always`.)
 
+### Target hardware decision (2026-06-10) — SNO moves to the bare-metal 2950X with the dual 3090s; vLLM staged
+
+Operator decision (brainstormed and recorded this date): the SNO's
+**permanent home is the Threadripper 2950X** (16c/32t, 128GB quad-channel,
+x16/x16 PCIe) **as bare metal**, with **both RTX 3090s** moving over from
+the DL360's external-PSU rig. Rationale: the GPUs follow OpenShift because
+that is the work-practice cluster (GPU Operator + vLLM is the enterprise
+pattern, and bare-metal SNO exercises MachineConfigs/node-tuning a VM
+cannot); the DL360 stays a general Proxmox lab (other VMs, possibly one
+CPU pulled for power); Proxmox-on-the-2950X was rejected (SNO snapshots
+age badly under cert rotation, and a second hypervisor duplicates what the
+DL360 already provides); multi-cluster experiments later use this SNO +
+throwaway VMs on the DL360.
+
+Consequences and sequencing (meshes with the triage + pre-nuke checklist
+below):
+
+1. **Stabilize the SNO on current hardware FIRST** (triage items 2 and 3 —
+   iSCSI data path, Gateway TLS). Do not move a half-broken cluster.
+2. **Pulling the 3090s out of the DL360 kills Talos GPU apps early**
+   (llama-cpp, comfyui) — before any Talos nuke. Inventory `vanillax.me`
+   AI consumers before the cards move.
+3. **The move itself is an Assisted Installer reinstall on the 2950X**,
+   keeping the cluster's network identity (hostname `sno-ai-lab`, node IP
+   `192.168.10.10`, all existing DNS records) so nothing else changes.
+   This is a NEW-hardware reinstall — it does not contradict "reinstall
+   remains only a disaster fallback" above, which is about the current box.
+4. **Reinstall survival matrix:** TrueNAS iSCSI (`vanillax-local-rwo`,
+   Retain) and NFS/SMB data survive — that was the point of defaulting to
+   off-node storage. Everything on `local-path` **dies with the node**,
+   including CNPG data volumes → restore the 4 databases from the
+   `cnpg-sno` Barman lineage (bump serverName to `…-sno-v2`, recovery
+   overlays exist per-DB). Treat the rest of the local-path tier as
+   disposable or migrate it ahead of the move.
+5. **After the reinstall on metal:** flip the gpu-operator marker (catalog
+   check already passes, see above) → expect `nvidia.com/gpu: 2`. The old
+   single-GPU caveats are void: llmfit's dual-GPU job becomes schedulable,
+   and llama-cpp/comfyui can hold a card each without time-slicing.
+6. **vLLM is the flagship workload for the new box**, staged at
+   `manifests/apps/ai/vllm/` (+ both cluster overlays, namespace-only via
+   the dvwa idiom): `Qwen/Qwen3-32B-AWQ`, TP=2 across both 3090s,
+   OpenAI-compatible `/v1` at `vllm-service.vllm.svc:8000`. Enable
+   checklist in that README. The Talos overlay is parity-only — never
+   enable it; Talos loses its GPUs in this move.
+7. **LVMS stays double-gated:** catalog (still absent from v4.22 index)
+   AND hardware — the "second SSD" by-id identity must be re-discovered
+   on the 2950X after the reinstall. `vllm-hf-cache` is a planned
+   `lvms-vg1` tenant once both gates clear.
+
 ### Live stabilization triage (2026-06-11) — what is actually broken and why
 
 Cluster core is healthy; the app layer is not. ~36 of 67 Applications not

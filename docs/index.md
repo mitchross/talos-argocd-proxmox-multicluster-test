@@ -28,6 +28,10 @@ needed.
 > - stabilization is **in progress**: many apps are Degraded (storage data
 >   path, Gateway TLS cert, per-app SCC crashes) — see the handoff notes'
 >   2026-06-11 section for the live triage and the pre-Talos-nuke checklist
+> - **target hardware decided (2026-06-10):** the SNO moves to the
+>   bare-metal Threadripper 2950X with both RTX 3090s (Assisted Installer
+>   reinstall, same network identity); **vLLM is staged** at
+>   `manifests/apps/ai/vllm/` as the flagship workload for that box
 > - read [multicluster handoff notes](domains/multicluster/handoff-notes.md)
 >   before OpenShift or multicluster work
 

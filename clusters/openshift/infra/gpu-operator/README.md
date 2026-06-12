@@ -18,6 +18,8 @@ against the live cluster before it can be wired in.
 > (Certified Operators) and `nfd` (Red Hat Operators) are published. This
 > entry is ready to enable; only the marker rename remains. (`lvms-operator`
 > is still absent from the 4.22 catalogs — that staging is unrelated.)
+> **But hold the rename until the box has GPUs** — see the sequencing note
+> under "SNO-specific notes" (2950X + dual-3090 move, decided 2026-06-10).
 
 ## Enable procedure
 
@@ -72,11 +74,21 @@ the operator still auto-detects OpenShift and uses the Driver Toolkit.
 
 ## SNO-specific notes
 
-- **Single GPU**: llmfit's `job-dual-gpu.yaml` requests `nvidia.com/gpu: "2"`
-  and will stay Pending forever on a 1-GPU node. Talos's GPU-0/GPU-1 split
-  (llama-cpp / comfyui) also cannot apply: with whole-card allocation and one
-  card, llama-cpp and comfyui CONTEND for the single GPU — only one schedules
-  at a time unless you enable time-slicing in the devicePlugin config.
+- **WHEN to enable (sequencing, decision 2026-06-10):** the catalog check
+  passes, but the CURRENT box has no GPU — enabling now deploys an idle
+  stack (NFD never labels a node, the ClusterPolicy never reaches `ready`,
+  Argo shows it Progressing/Degraded forever). Flip the marker **at or
+  after the 2950X bare-metal move** that brings the dual RTX 3090s — see
+  the target-hardware section in
+  `docs/domains/multicluster/handoff-notes.md`.
+- **Dual 3090s (target hardware):** expect `nvidia.com/gpu: 2` allocatable.
+  The old single-GPU caveats are void: llmfit's `job-dual-gpu.yaml`
+  (requests `nvidia.com/gpu: "2"`) becomes schedulable, and
+  llama-cpp + comfyui can hold one whole card each — no time-slicing
+  needed, same as the Talos GPU-0/GPU-1 split. The staged vLLM app
+  (`manifests/apps/ai/vllm/`) wants BOTH cards (TP=2); GPU contention
+  across these apps is hand-managed at runtime (operator decision
+  2026-06-09 — scale down what you are not using).
 - `mig.strategy: single` is inert on consumer GPUs (no MIG support).
 - The driver build happens in-cluster via the Driver Toolkit; first
   ClusterPolicy reconcile compiles the kernel module — expect 10-20 min.

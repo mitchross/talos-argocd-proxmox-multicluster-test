@@ -61,4 +61,5 @@ photos.vanillax.xyz    192.168.10.230
 stirling.vanillax.xyz    192.168.10.230
 swarmui.vanillax.xyz    192.168.10.230
 temporal.vanillax.xyz    192.168.10.230
+# vllm.vanillax.xyz    192.168.10.230   # staged until the 2950X GPU box (manifests/apps/ai/vllm/README.md)
 wyze-bridge.vanillax.xyz    192.168.10.230

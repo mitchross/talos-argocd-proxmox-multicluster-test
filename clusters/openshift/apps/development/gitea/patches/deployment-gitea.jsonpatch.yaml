@@ -1,13 +1,26 @@
-# initContainers/0 is fix-permissions (chown -R /data as root). Its
-# runAsUser: 0 must STAY (a chown as a random UID can never work) and its
-# explicit capabilities.add must GO: no grantable SCC short of privileged
-# allows added caps, while root's default CRI-O capability set already
-# includes CHOWN/FOWNER/DAC_OVERRIDE. Admitted via the anyuid SCC grant in
-# scc-rolebinding.yaml (verified live 2026-06-11 — the ReplicaSet was
-# FailedCreate-forbidden since bootstrap).
-- op: remove
-  path: "/spec/template/spec/securityContext/fsGroup"
-- op: remove
-  path: "/spec/template/spec/initContainers/0/securityContext/capabilities/add"
-- op: remove
-  path: "/spec/template/spec/initContainers/3/securityContext/runAsUser"
+# Strategic-merge, NOT JSON patch: Argo renders the chart with OpenShift API
+# capabilities, so the chart's compatibility logic already omits some
+# user/group fields cluster-side that still appear in local renders — a JSON
+# "remove" op then fails on the nonexistent key. SMP null-deletes are no-ops
+# when the field is absent, and the name key survives init-container reorders.
+#
+# fix-permissions (chown -R /data) keeps its runAsUser: 0 from the base (a
+# chown as a random UID can never work); its explicit capabilities.add must
+# go — no grantable SCC short of privileged allows added caps, and root's
+# default CRI-O capability set already includes CHOWN/FOWNER/DAC_OVERRIDE.
+# Admitted via the anyuid grant in scc-rolebinding.yaml.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitea
+  namespace: gitea
+spec:
+  template:
+    spec:
+      securityContext:
+        fsGroup: null
+      initContainers:
+        - name: fix-permissions
+          securityContext:
+            capabilities:
+              add: null

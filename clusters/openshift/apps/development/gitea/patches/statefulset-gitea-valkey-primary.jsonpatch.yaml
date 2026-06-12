@@ -1,14 +1,22 @@
-- op: remove
-  path: "/spec/template/spec/securityContext/fsGroup"
-- op: remove
-  path: "/spec/template/spec/securityContext/supplementalGroups"
-- op: remove
-  path: "/spec/template/spec/containers/0/securityContext/runAsUser"
-- op: remove
-  path: "/spec/template/spec/containers/0/securityContext/runAsGroup"
-# The bitnami common chart renders a literal empty seLinuxOptions: {} when
-# global.compatibility.omitEmptySeLinuxOptions is unset; every SCC's
-# MustRunAs strategy rejects the empty level ("must be s0:cNN,cNN"), so the
+# Strategic-merge, NOT JSON patch — see deployment-gitea.jsonpatch.yaml for
+# why (cluster-side helm renders differ; SMP null-deletes are no-op-safe).
+# The bitnami common chart renders a literal empty seLinuxOptions: {} that
+# every SCC's MustRunAs strategy rejects ("must be s0:cNN,cNN"), so the
 # StatefulSet was FailedCreate-forbidden since bootstrap (verified 2026-06-11).
-- op: remove
-  path: "/spec/template/spec/containers/0/securityContext/seLinuxOptions"
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: gitea-valkey-primary
+  namespace: gitea
+spec:
+  template:
+    spec:
+      securityContext:
+        fsGroup: null
+        supplementalGroups: null
+      containers:
+        - name: valkey
+          securityContext:
+            runAsUser: null
+            runAsGroup: null
+            seLinuxOptions: null

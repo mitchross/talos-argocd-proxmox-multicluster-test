@@ -67,14 +67,19 @@ configs:
     timeout.hard.reconciliation: "1h"
     # Global diff noise cleanup for resources normalized by their controllers.
     # Keep these system-level so AppSets only carry app-specific rules.
+    # parentRefs: normalize ONLY the defaulted `group`/`kind` subfields the API
+    # server fills in. Never ignore the whole `/spec/parentRefs` array or whole
+    # entries via `select(.group == null ...)` — both silently swallow Gateway
+    # re-parenting while ArgoCD still reports Synced (also blocks sync-apply with
+    # RespectIgnoreDifferences). Ported from prod fix; see
+    # docs/domains/networking/technitium-vanillax-me-migration.md.
     resource.customizations.ignoreDifferences.gateway.networking.k8s.io_HTTPRoute: |
       jqPathExpressions:
-      - '.spec.parentRefs[]? | select(.group == null or .kind == null)'
+      - .spec.parentRefs[].group
+      - .spec.parentRefs[].kind
       - .spec.rules[].backendRefs[].group
       - .spec.rules[].backendRefs[].kind
       - .spec.rules[].backendRefs[].weight
-      jsonPointers:
-      - /spec/parentRefs
     resource.customizations.ignoreDifferences.external-secrets.io_ExternalSecret: |
       jqPathExpressions:
       - .metadata.generation

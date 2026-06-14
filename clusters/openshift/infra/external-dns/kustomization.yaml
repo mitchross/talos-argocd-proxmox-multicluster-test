@@ -4,7 +4,9 @@ namespace: external-dns
 resources:
   - ns.yaml
   - cloudflare-external-secret.yaml
+  - technitium-external-secret.yaml
   - scc-rolebinding.yaml
+  - scc-rolebinding-technitium.yaml
 helmCharts:
   - name: external-dns
     repo: https://kubernetes-sigs.github.io/external-dns
@@ -12,3 +14,9 @@ helmCharts:
     releaseName: external-dns
     namespace: external-dns
     valuesFile: values.yaml
+  - name: external-dns
+    repo: https://kubernetes-sigs.github.io/external-dns
+    version: 1.21.1 # renovate: helm=kubernetes-sigs/external-dns
+    releaseName: external-dns-technitium
+    namespace: external-dns
+    valuesFile: values-technitium.yaml

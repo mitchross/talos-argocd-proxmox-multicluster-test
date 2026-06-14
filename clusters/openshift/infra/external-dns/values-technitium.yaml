@@ -1,0 +1,81 @@
+# Second external-dns instance for OpenShift SNO — writes INTERNAL DNS records
+# for vanillax.xyz to Technitium (192.168.10.15) over RFC2136 / TSIG.
+#
+# Internal clients resolve *.vanillax.xyz -> 192.168.10.231 (the
+# openshift-gateway-internal LAN LoadBalancer) while the same apps stay
+# publicly reachable via Cloudflare (managed by the primary external-dns
+# instance in values.yaml). The two instances are isolated by
+# fullnameOverride, txtOwnerId, and --gateway-label-filter.
+
+fullnameOverride: external-dns-technitium
+
+provider:
+  name: rfc2136
+
+# Watch Gateway API HTTPRoutes
+sources:
+  - gateway-httproute
+
+# Only manage the vanillax.xyz zone
+domainFilters:
+  - vanillax.xyz
+
+# upsert-only: never delete records — additive, internal-only split-DNS.
+policy: upsert-only
+registry: txt
+txtOwnerId: sno-prod-technitium # MUST differ from openshift-sno (Cloudflare) and talos owners
+txtPrefix: "external-dns-"
+
+# Route and Gateway filters isolate this instance from the public Cloudflare
+# external-dns. Only HTTPRoutes attached to openshift-gateway-internal are
+# published here.
+extraArgs:
+  - --gateway-label-filter=external-dns-gateway=openshift-gateway-internal
+  - --rfc2136-host=192.168.10.15
+  - --rfc2136-port=53
+  - --rfc2136-zone=vanillax.xyz
+  - --rfc2136-tsig-keyname=externaldns-vanillax-xyz
+  - --rfc2136-tsig-secret=$(EXTERNAL_DNS_RFC2136_TSIG_SECRET)
+  - --rfc2136-tsig-secret-alg=hmac-sha256
+  - --rfc2136-tsig-axfr
+
+logLevel: info
+logFormat: text
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+# nonroot-v2 SCC admits this UID (see scc-rolebinding-technitium.yaml — the
+# Helm release creates ServiceAccount "external-dns-technitium" via
+# fullnameOverride, so it needs its own SCC RoleBinding).
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+  seccompProfile:
+    type: RuntimeDefault
+
+podSecurityContext:
+  fsGroup: 65534
+  runAsNonRoot: true
+  runAsUser: 65534
+  seccompProfile:
+    type: RuntimeDefault
+
+env:
+  - name: EXTERNAL_DNS_RFC2136_TSIG_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: external-dns-technitium
+        key: tsig-secret
+
+interval: 1m
+triggerLoopOnEvent: true

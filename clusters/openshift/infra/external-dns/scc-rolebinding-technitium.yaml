@@ -1,0 +1,18 @@
+# The Technitium external-dns instance runs non-root (uid 65534). Because it
+# sets fullnameOverride: external-dns-technitium, the Helm release creates a
+# DISTINCT ServiceAccount "external-dns-technitium" — the existing
+# scc-rolebinding.yaml only covers SA "external-dns", so this instance needs
+# its own nonroot-v2 binding.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: external-dns-technitium-nonroot-v2
+  namespace: external-dns
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:nonroot-v2
+subjects:
+  - kind: ServiceAccount
+    name: external-dns-technitium
+    namespace: external-dns

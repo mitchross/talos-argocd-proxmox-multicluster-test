@@ -9,6 +9,10 @@ spec:
     kind: Gateway
     name: openshift-gateway
     namespace: openshift-ingress
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: openshift-gateway-internal
+    namespace: openshift-ingress
   hostnames:
   - comfyui.vanillax.xyz
   rules:

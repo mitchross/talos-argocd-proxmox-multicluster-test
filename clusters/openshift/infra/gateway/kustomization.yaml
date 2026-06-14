@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - gatewayclass.yaml
   - gateway.yaml
+  - gateway-internal.yaml
   - httproute-argocd.yaml
 generatorOptions:
   disableNameSuffixHash: true

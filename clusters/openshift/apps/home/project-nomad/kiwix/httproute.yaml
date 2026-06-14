@@ -14,6 +14,11 @@ spec:
     name: openshift-gateway
     namespace: openshift-ingress
     sectionName: https
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: openshift-gateway-internal
+    namespace: openshift-ingress
+    sectionName: https
   hostnames:
   - home-project-nomad-kiwix.vanillax.xyz
   rules:

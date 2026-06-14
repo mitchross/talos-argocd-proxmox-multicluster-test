@@ -1,0 +1,45 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: openshift-gateway-internal
+  namespace: openshift-ingress
+  labels:
+    # external-dns-technitium watches gateways with this label
+    # (--gateway-label-filter=external-dns-gateway=openshift-gateway-internal)
+    external-dns-gateway: openshift-gateway-internal
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    cert-manager.io/cluster-issuer: cloudflare-cluster-issuer
+    # NOTE: intentionally NO external-dns.alpha.kubernetes.io/target annotation.
+    # We WANT external-dns-technitium to publish this Gateway's pinned LAN
+    # LoadBalancer address (192.168.10.231) into Technitium for *.vanillax.xyz,
+    # so internal clients resolve apps to the LAN gateway instead of the
+    # Cloudflare-fronted public path.
+spec:
+  gatewayClassName: openshift-default
+  # Pin the MetalLB LoadBalancer address. .230 is the public openshift-gateway;
+  # .231 is the next free IP in the gateway-pool (192.168.10.230-240).
+  addresses:
+    - type: IPAddress
+      value: 192.168.10.231
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "*.vanillax.xyz"
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: "*.vanillax.xyz"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: cert-openshift-gateway-apps
+            kind: Secret
+            group: ""
+      allowedRoutes:
+        namespaces:
+          from: All

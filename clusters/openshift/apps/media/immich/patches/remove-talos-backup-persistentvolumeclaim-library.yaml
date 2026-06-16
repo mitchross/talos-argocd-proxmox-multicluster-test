@@ -11,4 +11,7 @@ metadata:
   annotations:
     argocd.argoproj.io/compare-options:
 spec:
+  # 300Gi photo library → TrueNAS NFS (NAS-resident, keeps it off the node-local
+  # thin pool). Everything else on this cluster defaults to local LVM block.
+  storageClassName: truenas-nfs-csi
   dataSourceRef:

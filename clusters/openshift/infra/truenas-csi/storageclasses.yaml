@@ -1,32 +1,31 @@
-# Portable default RWO block class, backed by TrueNAS iSCSI (ZVOL) via the
-# official csi.truenas.io driver (WebSocket API — works with TrueNAS 26).
+# Default RWO block class — backed by NODE-LOCAL LVM (LVMS/topolvm) on the
+# single node's second NVMe SSD (deviceClass vg1, see infra/lvm-storage).
 #
-# reclaimPolicy: Retain — OpenShift has NO VolSync/pvc-plumber backups, so a
-# deleted PVC must not destroy its data. Orphaned datasets are cleaned up
-# manually. datasetPath nests dynamic zvols under BigTank/k8s/iscsi so they can
-# be group-snapshotted on TrueNAS for DR.
+# WHY local instead of TrueNAS iSCSI: on a single-node cluster there is no
+# benefit to network block storage, and TrueNAS iSCSI proved fragile (the
+# target service did not survive a NAS reboot/lockup and SendTargets discovery
+# wedged — 2026-06 incident). Node-local LVM is faster, has no network/NAS
+# dependency, and supports CSI snapshots/clones. Keeping the SAME class name
+# (`vanillax-local-rwo`) means every app + StatefulSet volumeClaimTemplate that
+# references it migrates with zero per-app edits — delete the old (iSCSI) PVC
+# and it re-provisions here on recreate. Bulk/NAS-resident data (e.g. photos)
+# should use `truenas-nfs-csi` explicitly.
 #
-# NOTE: pool/datasetPath are proven for the NFS protocol (see the Talos core
-# `truenas-nfs` class). For iSCSI they mirror the same pattern on the same
-# csi.truenas.io driver — verify at first bootstrap that zvols land under
-# BigTank/k8s/iscsi/ before treating it as load-bearing.
+# Thin pool (overprovisionRatio 10 in the LVMCluster) → volumes provision thin;
+# real SSD usage is what counts, so original PVC sizes need no downsizing.
+# reclaimPolicy Delete: lab box, no backups, recreate-fresh is the model.
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: vanillax-local-rwo
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
-provisioner: csi.truenas.io
+provisioner: topolvm.io
 parameters:
-  protocol: "iscsi"
-  pool: "BigTank"
-  datasetPath: "k8s/iscsi/v"
-  compression: "LZ4"
-  sync: "STANDARD"
-  volblocksize: "16K"
-  iscsi.blocksize: "4096"
-reclaimPolicy: Retain
-volumeBindingMode: Immediate
+  topolvm.io/device-class: "vg1"
+  csi.storage.k8s.io/fstype: "xfs"
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
 allowVolumeExpansion: true
 ---
 # Dynamic RWX NFS class backed by TrueNAS NFS shares. Parameters mirror the

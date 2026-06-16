@@ -59,7 +59,7 @@ spec:
         fstype: xfs
         deviceSelector:
           paths:
-            - /dev/disk/by-id/CHANGEME-second-ssd
+            - /dev/disk/by-id/nvme-EDILOCA_EN605_512GB_AA233120115
         thinPoolConfig:
           name: thin-pool-1
           sizePercent: 90

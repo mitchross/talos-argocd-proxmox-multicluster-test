@@ -11,7 +11,7 @@ metadata:
   annotations:
     argocd.argoproj.io/compare-options:
 spec:
-  # 300Gi photo library → TrueNAS NFS (NAS-resident, keeps it off the node-local
-  # thin pool). Everything else on this cluster defaults to local LVM block.
-  storageClassName: truenas-nfs-csi
+  # Local LVM block (default vanillax-local-rwo). Was briefly TrueNAS NFS, but
+  # the csi.truenas.io driver crash-loops on this SNO — keeping ALL storage
+  # node-local removes any TrueNAS dependency. Lab box; recreate-fresh.
   dataSourceRef:

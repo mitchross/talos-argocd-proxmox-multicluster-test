@@ -1,6 +1,6 @@
-- op: remove
-  path: "/spec/template/spec/securityContext/runAsUser"
-- op: remove
-  path: "/spec/template/spec/securityContext/runAsGroup"
+# KEEP runAsUser:1000 (from base values) — the n8n image's USER is "node"
+# (non-numeric); removing runAsUser left runAsNonRoot:true unverifiable →
+# CreateContainerConfigError. With the n8n-anyuid SCC, runAsUser:1000 is allowed.
+# (2026-06-17; previously removed runAsUser/Group/fsGroup for restricted-v2.)
 - op: remove
   path: "/spec/template/spec/securityContext/fsGroup"

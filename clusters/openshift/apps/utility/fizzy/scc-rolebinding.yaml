@@ -1,16 +1,15 @@
-# This image needs its designed in-image user (root or a fixed UID) and
-# crashes under restricted-v2's random UID — verified live 2026-06-11
-# (SCC crash campaign, see docs/domains/multicluster/handoff-notes.md).
-# anyuid runs the pod as the image default, matching Talos behavior.
+# fizzy binds privileged port :80 as root. anyuid was NOT enough — under anyuid
+# the container still lacks NET_BIND_SERVICE, so it got "bind :80: permission
+# denied". privileged grants the capability. (2026-06-17; was anyuid.)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: fizzy-anyuid
+  name: fizzy-privileged
   namespace: fizzy
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:scc:anyuid
+  name: system:openshift:scc:privileged
 subjects:
   - kind: ServiceAccount
     name: default

@@ -2,6 +2,8 @@
 
 **Incident date:** 2026-06-14 · **Affected:** radar-ng (and any NFS consumer of BigTank) · **Resolution:** software-only, no hardware change.
 
+> ⚠️ **UPDATE — this recurred on 2026-06-16/17. The software-only fix was insufficient.** The special vdev (consumer SSDs) was the real root cause and was never replaced. See **[Recurrence 2026-06-16](#recurrence-2026-06-16--software-fix-was-insufficient-vdev-removed)** below. Permanent fix: the metadata mirror was **removed** from the pool (`zpool remove`), evacuating metadata to the HDDs. The "Preventive followup (not urgent)" at the bottom is now **done, and was never optional.**
+
 This documents a multi-layer outage where the radar-ng app went dark, the TrueNAS box hung/flapped, and the cluster hit `ImagePullBackOff`. All three root causes were **runtime TrueNAS/DNS config, not GitOps manifests** — so there is nothing in this repo that "caused" it, but the operational lessons below must be honored when standing up clusters or TrueNAS datasets.
 
 ## TL;DR — the three durable rules

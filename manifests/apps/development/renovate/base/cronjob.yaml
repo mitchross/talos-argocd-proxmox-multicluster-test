@@ -9,7 +9,9 @@ spec:
   # Poll hourly for LAN-registry image updates. Offset from the top of the hour
   # to avoid the common CronJob burst. concurrencyPolicy=Forbid prevents overlap.
   schedule: "17 * * * *"
-  timeZone: "Etc/UTC"
+  # timeZone "Etc/UTC" crashes kube-state-metrics (its image lacks that zoneinfo
+  # → KSM panics on CRON_TZ=Etc/UTC and takes down cluster metrics). Schedule is
+  # UTC by default, so omit timeZone entirely. (2026-06-17)
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 600
   successfulJobsHistoryLimit: 1

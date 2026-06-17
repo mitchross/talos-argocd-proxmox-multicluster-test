@@ -8,3 +8,4 @@ resources:
 patches:
 - path: patches/remove-talos-backup-namespace-perplexica.yaml
 - path: patches/remove-talos-backup-persistentvolumeclaim-perplexica-data.yaml
+- path: patches/securitycontext-anyuid.yaml

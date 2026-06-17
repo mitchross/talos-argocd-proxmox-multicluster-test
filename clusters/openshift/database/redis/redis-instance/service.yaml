@@ -1,0 +1,15 @@
+# Name MUST be redis-master — apps connect to redis-master.redis-instance.svc
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-master
+  namespace: redis-instance
+  labels:
+    app: redis
+spec:
+  selector:
+    app: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379

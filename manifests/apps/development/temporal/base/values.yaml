@@ -87,7 +87,12 @@ server:
         memory: 2Gi
 
 schema:
-  useHelmHooks: false
+  # MUST be true. The schema Job is always a PreSync hook; only the shims/config
+  # ConfigMaps are gated by this flag. With false, those configmaps become
+  # regular (post-sync) resources, so the schema hook deadlocks waiting for
+  # `temporal-shims` that never gets created until after the hook completes.
+  # true makes them hook-weight -1 PreSync hooks that run BEFORE the job. (2026-06-17)
+  useHelmHooks: true
   backoffLimit: 20
   resources:
     requests:

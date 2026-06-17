@@ -1,0 +1,19 @@
+# OpenShift picks the LEAST-privileged SCC that admits a pod, so even with the
+# perplexica-anyuid RoleBinding present, the pod ran under restricted-v2 with a
+# random assigned UID (1001080000) that owns none of the image's dirs → the app
+# got "Unable to open log: Permission denied". Pinning the image's own UID/GID
+# (1000, the `vane` user) forces anyuid selection AND runs the app as the user
+# that owns its files; fsGroup makes the local-path PVC group-writable. (2026-06-17)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: perplexica
+  namespace: perplexica
+spec:
+  template:
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000

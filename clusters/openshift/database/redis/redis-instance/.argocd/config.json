@@ -1,0 +1,9 @@
+{
+  "applicationName": "openshift-database-redis-instance",
+  "cluster": "openshift",
+  "project": "openshift-infrastructure",
+  "namespace": "redis-instance",
+  "part": "database",
+  "syncWave": "3",
+  "sourcePath": "clusters/openshift/database/redis/redis-instance"
+}

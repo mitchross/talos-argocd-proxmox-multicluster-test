@@ -1,0 +1,49 @@
+# Minimal Redis for OpenShift. paperless-ngx (and any other app) points at
+# redis://redis-master.redis-instance.svc.cluster.local:6379, but the Talos
+# redis-instance (Bitnami chart, longhorn-backed) was never ported here, so on
+# OpenShift the service didn't exist → paperless crash-looped on broker connect.
+# This is a broker/cache only — NO persistence — so disk writes are disabled,
+# which also means it runs cleanly under the default restricted-v2 SCC (writes
+# nothing to a volume, needs no special UID). (2026-06-17)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: redis-instance
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command: ["redis-server", "--save", "", "--appendonly", "no"]
+          ports:
+            - name: redis
+              containerPort: 6379
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 3
+          livenessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 10

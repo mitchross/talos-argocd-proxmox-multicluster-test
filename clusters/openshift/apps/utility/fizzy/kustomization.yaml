@@ -13,5 +13,6 @@ patches:
     name: fizzy
     group: apps
     namespace: fizzy
+- path: patches/securitycontext-privileged.yaml
 - path: patches/remove-talos-backup-namespace-fizzy.yaml
 - path: patches/remove-talos-backup-persistentvolumeclaim-data.yaml

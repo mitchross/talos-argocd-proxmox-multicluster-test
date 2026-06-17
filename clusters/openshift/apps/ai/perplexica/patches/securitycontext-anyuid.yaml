@@ -12,8 +12,10 @@ metadata:
 spec:
   template:
     spec:
+      # Run as root: forces anyuid SCC selection (restricted-v2 forbids UID 0),
+      # AND the seed-config init does `apk add jq` which REQUIRES root. Root also
+      # writes the app log fine. fsGroup keeps the local-path PVC group-owned.
+      # (1000 was wrong — it broke the apk init.) (2026-06-17)
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
+        runAsUser: 0
         fsGroup: 1000

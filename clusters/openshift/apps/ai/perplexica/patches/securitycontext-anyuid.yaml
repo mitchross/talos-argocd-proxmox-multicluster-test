@@ -12,10 +12,20 @@ metadata:
 spec:
   template:
     spec:
-      # Run as root: forces anyuid SCC selection (restricted-v2 forbids UID 0),
-      # AND the seed-config init does `apk add jq` which REQUIRES root. Root also
+      # ndots:2 — the seed-config init does `apk add jq`, and OpenShift injects
+      # `options ndots:5` + extra node search suffixes (sno-ai-lab.vanillax.xyz,
+      # lan) into resolv.conf. With ndots:5 alpine's musl `apk` resolver treats
+      # dl-cdn.alpinelinux.org (3 dots) as non-FQDN, walks the search list, and
+      # fails → "DNS: no address for host". ndots:2 makes the 3-dot CDN resolve
+      # directly while 0/1-dot in-cluster service names still use search. (Talos
+      # works because its pods get a leaner resolv.conf with no node suffixes.)
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "2"
+      # Run as root: forces privileged SCC selection (restricted-v2/anyuid reject
+      # UID 0), AND the seed-config init's `apk add` REQUIRES root. Root also
       # writes the app log fine. fsGroup keeps the local-path PVC group-owned.
-      # (1000 was wrong — it broke the apk init.) (2026-06-17)
       securityContext:
         runAsUser: 0
         fsGroup: 1000

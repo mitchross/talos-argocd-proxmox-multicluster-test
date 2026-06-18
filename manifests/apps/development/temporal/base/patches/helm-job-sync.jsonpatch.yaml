@@ -7,3 +7,6 @@
 - op: add
   path: /metadata/annotations/argocd.argoproj.io~1hook-delete-policy
   value: BeforeHookCreation
+- op: add
+  path: /spec/activeDeadlineSeconds
+  value: 900

@@ -1,11 +1,11 @@
 # Second external-dns instance for OpenShift SNO — writes INTERNAL DNS records
 # for vanillax.xyz to Technitium (192.168.10.15) over RFC2136 / TSIG.
 #
-# Internal clients resolve *.vanillax.xyz -> 192.168.10.231 (the
-# openshift-gateway-internal LAN LoadBalancer) while the same apps stay
-# publicly reachable via Cloudflare (managed by the primary external-dns
-# instance in values.yaml). The two instances are isolated by
-# fullnameOverride, txtOwnerId, and --gateway-label-filter.
+# Internal clients resolve explicitly opted-in *.vanillax.xyz routes to the
+# live openshift-gateway LoadBalancer (192.168.10.230) while the same apps stay
+# publicly reachable via Cloudflare where separately labeled. The internal
+# openshift-gateway-internal LoadBalancer is still pending, so this instance
+# intentionally watches opted-in routes on the programmed external Gateway.
 
 fullnameOverride: external-dns-technitium
 
@@ -27,10 +27,11 @@ txtOwnerId: sno-prod-technitium # MUST differ from openshift-sno (Cloudflare) an
 txtPrefix: "external-dns-"
 
 # Route and Gateway filters isolate this instance from the public Cloudflare
-# external-dns. Only HTTPRoutes attached to openshift-gateway-internal are
-# published here.
+# external-dns. Only HTTPRoutes labeled external-dns-technitium=true and attached
+# to openshift-gateway are published here.
 extraArgs:
-  - --gateway-label-filter=external-dns-gateway=openshift-gateway-internal
+  - --label-filter=external-dns-technitium=true
+  - --gateway-label-filter=external-dns-gateway=gateway-external
   - --rfc2136-host=192.168.10.15
   - --rfc2136-port=53
   - --rfc2136-zone=vanillax.xyz

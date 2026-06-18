@@ -7,6 +7,7 @@ metadata:
     app.kubernetes.io/name: home-assistant
     app.kubernetes.io/component: home-automation
     app.kubernetes.io/part-of: smart-home
+    external-dns-technitium: "true"
   annotations:
     # Technitium private DNS should hit the live openshift-gateway address.
     external-dns.alpha.kubernetes.io/target: 192.168.10.230

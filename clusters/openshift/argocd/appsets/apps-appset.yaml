@@ -20,6 +20,11 @@ spec:
       annotations:
         argocd.argoproj.io/manifest-generate-paths: ".;/manifests/apps/{{index .path.segments 3}}/{{.path.basename}}/base"
         argocd.argoproj.io/sync-wave: "6"
+        # OpenShift apps still carry immutable PVC/StorageClass drift from the
+        # migration. Argo's server-side diff dry-run validates those immutable
+        # fields before ignoreDifferences can mask them, so compare client-side
+        # at the Application level until the live objects are recreated/aligned.
+        argocd.argoproj.io/compare-options: ServerSideDiff=false
     spec:
       project: openshift-apps
       revisionHistoryLimit: 3

@@ -1,16 +1,17 @@
-# This image needs its designed in-image user (root or a fixed UID) and
-# crashes under restricted-v2's random UID — verified live 2026-06-11
-# (SCC crash campaign, see docs/domains/multicluster/handoff-notes.md).
-# anyuid runs the pod as the image default, matching Talos behavior.
+# perplexica's seed-config init does `apk add jq` (needs root) and the app
+# writes logs to image-owned paths — so it must run as root (runAsUser:0, set in
+# patches/securitycontext-anyuid.yaml). anyuid REJECTED uid 0 here ("unable to
+# validate against any SCC"); privileged permits it. Mirrors the fizzy fix.
+# (2026-06-18; was anyuid.)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: perplexica-anyuid
+  name: perplexica-privileged
   namespace: perplexica
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:openshift:scc:anyuid
+  name: system:openshift:scc:privileged
 subjects:
   - kind: ServiceAccount
     name: default

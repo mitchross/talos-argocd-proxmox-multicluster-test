@@ -1,0 +1,11 @@
+# project-zomboid is intentionally NOT run on the SNO/OpenShift cluster (its
+# image crash-loops here and it's not needed on this cluster). Pin replicas to 0
+# in git so Argo selfHeal keeps it down — a live `kubectl scale` gets reverted.
+# (2026-06-18)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project-zomboid
+  namespace: project-zomboid
+spec:
+  replicas: 0

@@ -4,6 +4,7 @@ namespace: project-zomboid
 resources:
 - "../../../../../manifests/apps/home/project-zomboid/base"
 patches:
+- path: patches/replicas-0.yaml
 - path: patches/remove-talos-backup-namespace-project-zomboid.yaml
 - path: patches/remove-talos-backup-persistentvolumeclaim-zomboid-data.yaml
 - path: patches/remove-talos-backup-persistentvolumeclaim-zomboid-server-files.yaml

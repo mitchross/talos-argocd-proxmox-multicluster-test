@@ -8,6 +8,10 @@ metadata:
     # (wave 6) creates PVCs. external-secrets (wave 0) provides the apiKey first.
     argocd.argoproj.io/sync-wave: "1"
     argocd.argoproj.io/manifest-generate-paths: ".;/clusters/openshift/infra/truenas-csi"
+    # The live truenas-nfs-csi StorageClass predates the current manifest.
+    # Its parameters/reclaimPolicy are immutable, and server-side diff validates
+    # them before ignoreDifferences can mask the drift.
+    argocd.argoproj.io/compare-options: ServerSideDiff=false
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
@@ -19,6 +23,14 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: truenas-csi
+  ignoreDifferences:
+    - group: storage.k8s.io
+      kind: StorageClass
+      name: truenas-nfs-csi
+      jqPathExpressions:
+        - .parameters
+        - .reclaimPolicy
+        - .volumeBindingMode
   syncPolicy:
     automated:
       prune: true

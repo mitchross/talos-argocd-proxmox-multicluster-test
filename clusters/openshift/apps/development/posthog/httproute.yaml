@@ -8,9 +8,6 @@ spec:
   - name: openshift-gateway
     namespace: openshift-ingress
     sectionName: https
-  - name: openshift-gateway-internal
-    namespace: openshift-ingress
-    sectionName: https
   hostnames:
   - posthog.vanillax.xyz
   rules:
@@ -77,9 +74,6 @@ metadata:
 spec:
   parentRefs:
   - name: openshift-gateway
-    namespace: openshift-ingress
-    sectionName: https
-  - name: openshift-gateway-internal
     namespace: openshift-ingress
     sectionName: https
   hostnames:

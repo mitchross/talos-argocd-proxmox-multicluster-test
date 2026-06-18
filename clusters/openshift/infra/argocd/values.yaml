@@ -94,6 +94,7 @@ configs:
       - .spec.dataSourceRef
       - .spec.dataSource
       - .spec.volumeName
+      - .spec.storageClassName
       - .spec.resources.requests.storage
     # CRDs — K8s API server adds conversion and generation fields
     # NOTE: .status ignored globally by ArgoCD 3.0+ (PR #22230)

@@ -5,6 +5,8 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "1"
+    # Technitium private DNS should hit the live openshift-gateway address.
+    external-dns.alpha.kubernetes.io/target: 192.168.10.230
 spec:
   parentRefs:
     - group: gateway.networking.k8s.io

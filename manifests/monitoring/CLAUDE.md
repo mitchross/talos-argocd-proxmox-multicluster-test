@@ -2,31 +2,18 @@
 
 ## Observability Architecture
 
-```
-OTEL Collector Agent (DaemonSet)  →  OTEL Collector Gateway (Deployment)  →  Tempo (traces)
-  per node: filelog + OTLP recv        k8sattributes, batch, fan-out     →  Loki (logs)
-                                                                         →  Prometheus (metrics)
-```
+OTEL Collector Agent (DaemonSet, per-node filelog + OTLP receive) forwards to
+the OTEL Collector Gateway (Deployment: k8sattributes, batch, fan-out), which
+ships traces to Tempo, logs to Loki, and metrics to Prometheus.
 
 External clients (e.g. the radar-ng mobile app) hit the Gateway over HTTPS at
 `otel.vanillax.me/v1/{traces,logs,metrics}` via `collector-gateway-httproute.yaml`.
 
-- **OTEL Operator** (`manifests/infra/opentelemetry-operator/`) — manages Collectors and auto-instrumentation
-- **Prometheus + Grafana** (`manifests/monitoring/prometheus-stack/`) — metrics storage, dashboards, alerting
-- **Loki** (`manifests/monitoring/loki-stack/`) — log storage (S3 backend on RustFS)
-- **Tempo** (`manifests/monitoring/tempo/`) — trace storage (S3 backend on RustFS)
-
-## Auto-Instrumentation
-
-Apps opt-in by adding an annotation to their Deployment:
-
-```yaml
-annotations:
-  instrumentation.opentelemetry.io/inject-python: "true"
-  # also: inject-nodejs, inject-java, inject-go, inject-dotnet
-```
-
-The OTEL Operator webhook injects an init container with the OTEL SDK. Traces are sent to the Agent's OTLP endpoint automatically.
+- **OTEL Operator** (`clusters/talos/infra/opentelemetry-operator/`) — manages Collectors and auto-instrumentation
+- **OTEL observability overlay** (`clusters/talos/infra/opentelemetry-operator-observability/`) — the operator's ServiceMonitor, deployed at a wave after kube-prometheus-stack so `monitoring.coreos.com` CRDs exist
+- **Prometheus + Grafana** (`clusters/talos/monitoring/prometheus-stack/`) — metrics storage, dashboards, alerting
+- **Loki** (`clusters/talos/monitoring/loki-stack/`) — log storage (S3 backend on RustFS)
+- **Tempo** (`clusters/talos/monitoring/tempo/`) — trace storage (S3 backend on RustFS)
 
 ## Common Pitfalls
 
@@ -40,10 +27,10 @@ The OTEL Operator webhook injects an init container with the OTEL SDK. Traces ar
 
 ## Key Files
 
-- Custom ServiceMonitors: `manifests/monitoring/prometheus-stack/custom-servicemonitors.yaml`
-- Custom alerts: `manifests/monitoring/prometheus-stack/custom-alerts.yaml`
-- GPU alerts: `manifests/monitoring/prometheus-stack/gpu-alerts.yaml`
-- OTEL Collector Agent: `manifests/infra/opentelemetry-operator/collector-agent.yaml`
-- OTEL Collector Gateway: `manifests/infra/opentelemetry-operator/collector-gateway.yaml`
-- OTEL Gateway public HTTPRoute: `manifests/infra/opentelemetry-operator/collector-gateway-httproute.yaml`
-- Auto-instrumentation: `manifests/infra/opentelemetry-operator/instrumentation.yaml`
+- Custom ServiceMonitors: `clusters/talos/monitoring/prometheus-stack/custom-servicemonitors.yaml`
+- Custom alerts: `clusters/talos/monitoring/prometheus-stack/custom-alerts.yaml`
+- GPU alerts: `clusters/talos/monitoring/prometheus-stack/gpu-alerts.yaml`
+- OTEL Collector Agent: `clusters/talos/infra/opentelemetry-operator/collector-agent.yaml`
+- OTEL Collector Gateway: `clusters/talos/infra/opentelemetry-operator/collector-gateway.yaml`
+- OTEL Gateway public HTTPRoute: `clusters/talos/infra/opentelemetry-operator/collector-gateway-httproute.yaml`
+- Auto-instrumentation: `clusters/talos/infra/opentelemetry-operator/instrumentation.yaml`

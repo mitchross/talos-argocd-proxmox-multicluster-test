@@ -12,7 +12,7 @@ This cluster uses **llama-cpp** (NOT ollama) for all local AI inference.
   **Qwen3-4B/8B FC** (fast n8n tool-calling)
 - Creative-only toy: Qwen 3.5 Uncensored — **keep abliterated models OUT of
   Perplexica / RAG / tool-calling** (abliteration degrades accuracy)
-- Full preset list (model IDs clients send in the `model` field): `manifests/apps/ai/llama-cpp/presets.ini`
+- Full preset list (model IDs clients send in the `model` field): `manifests/apps/ai/llama-cpp/base/presets.ini`
 - **What each model is / when to use it: [`docs/domains/ai-gpu/model-catalog.md`](../../docs/domains/ai-gpu/model-catalog.md)**
 - **Models swap natively** via `llama-server --models-preset` — no external
   `llama-swap` needed. `--models-max 1` = one resident at a time.
@@ -53,48 +53,7 @@ the workload onto the wrong card.
 
 ## GPU Workload Pattern
 
-Reference `manifests/apps/ai/comfyui/` for complete example:
-
-```yaml
-spec:
-  template:
-    spec:
-      # Select GPU nodes
-      nodeSelector:
-        feature.node.kubernetes.io/pci-0300_10de.present: "true"
-
-      # NVIDIA runtime for CUDA
-      runtimeClassName: nvidia
-
-      # Priority to prevent eviction
-      priorityClassName: gpu-workload-preemptible
-
-      # Allow scheduling on GPU nodes
-      tolerations:
-      - key: nvidia.com/gpu
-        operator: Exists
-        effect: NoSchedule
-
-      containers:
-      - name: app
-        resources:
-          requests:
-            nvidia.com/gpu: "1"
-          limits:
-            nvidia.com/gpu: "1"
-```
+Reference `manifests/apps/ai/comfyui/` for a complete example (nodeSelector,
+`runtimeClassName: nvidia`, GPU toleration, `nvidia.com/gpu` requests/limits).
 
 **GPU node is reserved for LLM RAM** — do not schedule Longhorn replicas or non-GPU workloads there.
-
-## Debugging GPU
-
-```bash
-# Verify GPU nodes are labeled
-kubectl get nodes -o json | jq '.items[].metadata.labels' | grep gpu
-
-# Check NVIDIA GPU Operator
-kubectl get pods -n gpu-operator
-
-# Test GPU from pod
-kubectl exec -it gpu-pod -n app-name -- nvidia-smi
-```

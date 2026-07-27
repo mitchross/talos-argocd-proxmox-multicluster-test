@@ -2,51 +2,11 @@
 
 ## Adding New Applications
 
-### Minimal Application (No storage/secrets)
+Shared workload source lives in `manifests/apps/category/app-name/base/`; each
+cluster gets a deployable overlay at `clusters/<cluster>/apps/category/app-name/`
+(see `manifests/apps/development/nginx/` for the pattern).
 
-Create the shared workload under:
-
-```text
-manifests/apps/category/app-name/base/
-```
-
-```yaml
-# manifests/apps/category/app-name/base/namespace.yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: app-name
-```
-
-```yaml
-# manifests/apps/category/app-name/base/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-namespace: app-name
-resources:
-- namespace.yaml
-- deployment.yaml
-- service.yaml
-```
-
-Create one deployable overlay per cluster:
-
-```text
-clusters/talos/apps/category/app-name/
-clusters/openshift/apps/category/app-name/
-```
-
-```yaml
-# clusters/talos/apps/category/app-name/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-namespace: app-name
-resources:
-- ../../../../../manifests/apps/category/app-name/base
-- httproute.yaml
-```
-
-Repeat the overlay for OpenShift. The cluster-local app ApplicationSets
+The cluster-local app ApplicationSets
 directory-discover `clusters/<cluster>/apps/*/*`, derive the Application name,
 project, namespace, and source path, and deploy only to
 `https://kubernetes.default.svc`. Do not add app `.argocd/config.json` files.
@@ -87,25 +47,10 @@ spec:
   - backendRefs:
     - name: app-service
       port: 8080
-
-# clusters/talos/apps/category/app-name/httproute.yaml - TALOS INTERNAL
-# apiVersion: gateway.networking.k8s.io/v1
-# kind: HTTPRoute
-# metadata:
-#   name: app-route
-#   namespace: app-name
-# spec:
-#   parentRefs:
-#   - kind: Gateway
-#     name: gateway-internal
-#     namespace: gateway
-#   hostnames:
-#   - app.vanillax.me
-#   rules:
-#   - backendRefs:
-#     - name: app-service
-#       port: 8080
 ```
+
+Internal-only Talos routes bind to `gateway-internal` instead (no external-dns
+label/annotation, no `sectionName`).
 
 OpenShift routes are separate complete files under
 `clusters/openshift/apps/...`. Do not copy Talos `gateway-external`,
@@ -113,35 +58,6 @@ OpenShift routes are separate complete files under
 into OpenShift. Before changing OpenShift route hostnames, read
 `docs/domains/multicluster/handoff-notes.md`; the live OpenShift Gateway DNS
 boundary is not yet resolved.
-
-### Application with Secrets (1Password)
-
-```yaml
-# externalsecret.yaml
-apiVersion: external-secrets.io/v1
-kind: ExternalSecret
-metadata:
-  name: app-secrets
-  namespace: app-name
-spec:
-  refreshInterval: "1h"
-  secretStoreRef:
-    kind: ClusterSecretStore
-    name: 1password
-  target:
-    name: app-secrets
-    creationPolicy: Owner
-  data:
-  - secretKey: API_KEY
-    remoteRef:
-      key: app-name           # 1Password item name
-      property: api_key       # Field in 1Password item
-
-# Then reference in deployment:
-envFrom:
-- secretRef:
-    name: app-secrets
-```
 
 ### Deployment Strategy for Apps with PVCs
 
@@ -197,10 +113,12 @@ spec:
   storageClassName: vanillax-local-rwo
 ```
 
-Talos maps `vanillax-local-rwo` to Longhorn. OpenShift intends to map it to
-LVM Storage, but OpenShift storage is not live-validated yet.
+Talos maps `vanillax-local-rwo` to Longhorn. OpenShift maps it to TrueNAS
+iSCSI via the official truenas-csi driver — the live default class, set in
+`clusters/openshift/infra/truenas-csi/storageclasses.yaml`. LVM Storage
+(`clusters/openshift/infra/lvm-storage/`) is staged/disabled, not the mapping.
 
-Talos backups use pvc-plumber `v4.0.1`. pvc-plumber owns VolSync
+Talos backups use pvc-plumber `v4.0.2`. pvc-plumber owns VolSync
 `ReplicationSource` and `ReplicationDestination` resources for opted-in PVCs.
 Do not add inline RS/RD documents for normal application PVCs.
 
@@ -266,8 +184,6 @@ spec:
 Verify the Talos operator-owned resources after syncing:
 
 ```
-kubectl get replicationsource,replicationdestination,pvc -n app-name
-kubectl get secret -n app-name volsync-kopia-repository   # produced by ClusterES
 kubectl port-forward -n pvc-plumber svc/pvc-plumber-metrics 8080:8080
 curl -fsS http://127.0.0.1:8080/audit
 ```
@@ -294,46 +210,5 @@ OpenShift-specific backup policy is selected and tested.
 For the complete Talos backup contract, use `.claude/commands/add-backup.md`
 and `docs/talos-argocd-pvc-plumber-integration.md`.
 
-## Configuration Patterns
-
-### Helm + Kustomize Pattern
-
-```yaml
-# kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-namespace: app-name
-
-helmCharts:
-- name: chart-name
-  repo: https://charts.example.com
-  version: 1.2.3
-  releaseName: app-name
-  valuesFile: values.yaml
-  includeCRDs: true
-
-resources:
-- namespace.yaml
-- externalsecret.yaml
-```
-
-### Component Reuse
-
-```yaml
-# kustomization.yaml
-components:
-- ../../common/deployment-defaults  # Applies revisionHistoryLimit: 2 to all Deployments
-```
-
-## Reference Examples
-
-| Pattern | Location |
-|---------|----------|
-| **Minimal app** | `manifests/apps/development/nginx/base/` |
-| **GPU workload** | `manifests/apps/ai/comfyui/base/` |
-| **Complex app with storage** | `manifests/apps/media/immich/base/` |
-| **PVC with automatic backup** | `manifests/apps/home/project-zomboid/base/pvc.yaml` (see `zomboid-data`) |
-| **Helm + Kustomize** | `manifests/infra/1passwordconnect/` |
-| **Secret management** | Any app with `externalsecret.yaml` |
-| **Job with ArgoCD hooks** | `manifests/apps/development/posthog/base/core/jobs.yaml` |
-| **Helm Job patch** | `manifests/apps/development/temporal/base/kustomization.yaml` |
+Reference examples (Helm + Kustomize, Job hooks, backups, and more) are
+tabulated in the root `CLAUDE.md`.

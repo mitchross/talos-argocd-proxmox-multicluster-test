@@ -129,3 +129,7 @@ credentials.base64
 /scripts/k8s-capacity-estimate-omni-prod-talos-prod-cluster-talos-prod-sa-baseline-20260504T234238Z
 /scripts/k8s-talos-gpu-audit-omni-prod-talos-prod-cluster-talos-prod-sa_-20260504T231835Z
 scripts/k8s-talos-gpu-audit-omni-prod-talos-prod-cluster-talos-prod-sa_-20260504T231835Z.tar.gz
+
+# Agent-managed worktrees (Claude Code, Hermes)
+.claude/worktrees/
+.worktrees/
